@@ -167,6 +167,16 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 .silver-name { color: var(--silver); }
 .bronze-name { color: var(--bronze); }
 
+.medal {
+  display: inline-block; min-width: 22px; padding: 2px 6px; margin-left: 2px;
+  border-radius: 5px; font-family: var(--mono); font-size: 12px; font-weight: 700;
+  text-align: center; line-height: 1.1;
+}
+.medal-gold   { color: var(--gold);   background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.35); }
+.medal-silver { color: var(--silver); background: rgba(203,213,225,0.10); border: 1px solid rgba(203,213,225,0.30); }
+.medal-bronze { color: var(--bronze); background: rgba(180,83,9,0.12);   border: 1px solid rgba(180,83,9,0.32); }
+.medal-dim    { opacity: 0.25; font-weight: 400; }
+
 .badge {
   display: inline-block; padding: 1px 6px; border-radius: 3px;
   font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
@@ -271,9 +281,10 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 
   <div class="controls">
     <div class="tabs" id="topTabs">
-      <button class="tab active" data-view="ranking">Ranking</button>
+      <button class="tab active" data-view="season2">Season 2</button>
+      <button class="tab" data-view="alltime">All Time</button>
       <button class="tab" data-view="events">Events</button>
-      <button class="tab" data-view="matrix">Tag Matrix</button>
+      <button class="tab" data-view="playerinfo">Player Info</button>
     </div>
     <div id="ctrlExtras" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto;"></div>
   </div>
@@ -318,12 +329,12 @@ document.addEventListener('DOMContentLoaded', function(){
 // ── State ─────────────────────────────────────────────────────────────
 let DATA = null;
 let SID2NAME = {};
-let view = 'ranking';
-let rankMode = 'placement';                   // 'placement' | 'elo'
-let rankingSort = { col: 'points', dir: -1 }; // re-init when switching mode
+let view = 'season2';                         // 'season2' | 'alltime' | 'events' | 'playerinfo'
+let rankingSort = { col: 'points', dir: -1 }; // re-init when switching ranking mode
 let eventSort = { col: 'event', dir: -1 };    // newest first
 let eventExpanded = null;                     // event# currently open
 let matrixSelected = null;
+function rankMode() { return view === 'alltime' ? 'elo' : 'placement'; }
 
 // ── Load + dispatch ───────────────────────────────────────────────────
 fetch('tyo.json?v=' + Date.now())
@@ -357,28 +368,23 @@ function render() {
   var ctrl = document.getElementById('ctrlExtras');
   ctrl.innerHTML = '';
   var content = document.getElementById('content');
-  if (view === 'ranking') content.innerHTML = renderRanking(ctrl);
+  if (view === 'season2' || view === 'alltime') content.innerHTML = renderRanking(ctrl);
   else if (view === 'events') content.innerHTML = renderEvents(ctrl);
-  else if (view === 'matrix') content.innerHTML = renderMatrix(ctrl);
+  else if (view === 'playerinfo') content.innerHTML = renderPlayerInfo(ctrl);
   attachHandlers();
 }
 
 // ── Ranking view ──────────────────────────────────────────────────────
 const RANK_PLACEMENT_COLS = '40px 1fr 70px 50px 70px 50px 50px';
-const RANK_ELO_COLS       = '40px 1fr 70px 60px 50px 70px 90px 70px';
+const RANK_ELO_COLS       = '40px 1fr 70px 90px 50px 70px 90px 55px';
 function renderRanking(ctrl) {
-  var modeTabs =
-    `<div class="mode-tabs" id="modeTabs">
-       <button class="mtab ${rankMode==='placement'?'active':''}" data-mode="placement">Placement</button>
-       <button class="mtab ${rankMode==='elo'?'active':''}"        data-mode="elo">ELO</button>
-     </div>`;
+  var mode = rankMode();
   ctrl.innerHTML =
-    modeTabs +
     `<input type="text" class="search-input" id="rankSearch" placeholder="Search player...">` +
-    rankInfoTip();
+    rankInfoTip(mode);
   var rows;
   var headHtml;
-  if (rankMode === 'placement') {
+  if (mode === 'placement') {
     rows = DATA.ranking.players.slice();
     if (rankingSort.col !== 'rank' && !['name','points','cups_in_window','podiums','tags','elims'].includes(rankingSort.col)) {
       rankingSort = { col: 'points', dir: -1 };
@@ -406,11 +412,11 @@ function renderRanking(ctrl) {
         <div data-sort="rank">#${arrow('rank')}</div>
         <div data-sort="name">Player${arrow('name')}</div>
         <div data-sort="rating" style="text-align:right">Rating${arrow('rating')}</div>
-        <div data-sort="peak" style="text-align:right">Peak${arrow('peak')}</div>
-        <div data-sort="cups" style="text-align:right">Cups${arrow('cups')}</div>
-        <div data-sort="winpct" style="text-align:right" title="wins / total pair matchups">Win%${arrow('winpct')}</div>
+        <div data-sort="podiums" style="text-align:right" title="gold/silver/bronze">Podium${arrow('podiums')}</div>
+        <div data-sort="cups" style="text-align:right" title="Logged cups only.&#10;Events 1–22 and 26 have no per-round data so they're not counted here.&#10;(Cup wins from those events still show in Podium.)">Cups${arrow('cups')}</div>
+        <div data-sort="winpct" style="text-align:right" title="Wins / total pair matchups, logged cups only.&#10;Events 1–22 and 26 have no per-round data so they don't contribute pairs.">Win%${arrow('winpct')}</div>
         <div data-sort="wld" style="text-align:right" title="W = times you tagged your target&#10;L = times your pursuer tagged you&#10;D = double DNF (no one was strictly faster)">W-L-D${arrow('wld')}</div>
-        <div data-sort="podiums" style="text-align:right" title="gold/silver/bronze">Pod${arrow('podiums')}</div>
+        <div data-sort="peak" style="text-align:right">Peak${arrow('peak')}</div>
       </div>`;
   }
   var q = '';
@@ -421,22 +427,12 @@ function renderRanking(ctrl) {
       document.getElementById('rankBody').innerHTML = renderRankRows(rows, q);
       attachHandlers();
     });
-    document.querySelectorAll('#modeTabs .mtab').forEach(b => {
-      b.addEventListener('click', () => {
-        if (rankMode === b.dataset.mode) return;
-        rankMode = b.dataset.mode;
-        rankingSort = (rankMode === 'placement')
-          ? { col: 'points', dir: -1 }
-          : { col: 'rating', dir: -1 };
-        render();
-      });
-    });
   }, 0);
   return headHtml + `<div id="rankBody">${renderRankRows(rows, q)}</div>`;
 }
 
-function rankInfoTip() {
-  if (rankMode === 'placement') {
+function rankInfoTip(mode) {
+  if (mode === 'placement') {
     return `<span class="info-tip-wrap">
        <button class="info-btn">ℹ</button>
        <div class="info-tip">
@@ -481,6 +477,14 @@ function rankSorter(s) {
 function winPct(r) {
   return r.pairs ? r.wins / r.pairs : 0;
 }
+function podiumCell(g, s, b) {
+  // Render g/s/b as three medal pills. Empty slots dim out.
+  function pill(val, kind) {
+    var dim = !val;
+    return `<span class="medal medal-${kind}${dim ? ' medal-dim' : ''}">${val}</span>`;
+  }
+  return pill(g, 'gold') + pill(s, 'silver') + pill(b, 'bronze');
+}
 function eloSorter(s) {
   return (a, b) => {
     let va, vb;
@@ -495,7 +499,7 @@ function eloSorter(s) {
   };
 }
 function renderRankRows(rows, q) {
-  if (rankMode === 'placement') {
+  if (rankMode() === 'placement') {
     return rows.filter(r => !q || r.name.toLowerCase().includes(q)).map((r, i) => {
       var pod = r.podiums;
       var tagSum = r.history.reduce((t,h)=>t+(h.tags||0),0);
@@ -527,15 +531,13 @@ function renderRankRows(rows, q) {
         <div class="rank">${i + 1}</div>
         <div class="player"><span class="pname ${nameClass}">${escapeHtml(r.name)}</span></div>
         <div style="text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700">${r.rating.toFixed(1)}</div>
-        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.peak.toFixed(1)}</div>
+        <div class="pod-cell" style="text-align:right">${podiumCell(r.gold, r.silver, r.bronze)}</div>
         <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups}</div>
         <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${(winPct(r) * 100).toFixed(1)}%</div>
         <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">
           <span style="color:var(--green)">${r.wins}</span>-<span style="color:var(--red)">${r.losses}</span>-<span style="color:var(--text-muted)">${r.draws}</span>
         </div>
-        <div style="text-align:right;font-family:var(--mono)">
-          <span style="color:var(--gold)">${r.gold}</span>/<span style="color:var(--silver)">${r.silver}</span>/<span style="color:var(--bronze)">${r.bronze}</span>
-        </div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--text-muted);font-size:11px">${r.peak.toFixed(1)}</div>
       </div>
       <div class="detail" id="rd-${r.steamid}" style="display:none">
         ${renderRankDetailElo(r)}
@@ -556,7 +558,7 @@ function renderRankDetail(r) {
         <span><span class="rd-label">Elims</span> ${p.eliminations_made_total}</span>
         <span><span class="rd-label">Eliminated</span> ${p.times_eliminated_total}×</span>
       </div>
-      <button class="rd-link" data-jump-matrix="${r.steamid}">Tag matrix →</button>
+      <button class="rd-link" data-jump-matrix="${r.steamid}">Player info →</button>
     </div>
   ` : '';
   return `
@@ -586,7 +588,7 @@ function renderRankDetailElo(r) {
           <span style="color:var(--green)">${r.wins}</span>-<span style="color:var(--red)">${r.losses}</span>-${r.draws}</span>
         <span><span class="rd-label">G/S/B</span> ${r.gold}/${r.silver}/${r.bronze}</span>
       </div>
-      <button class="rd-link" data-jump-matrix="${r.steamid}">Tag matrix →</button>
+      <button class="rd-link" data-jump-matrix="${r.steamid}">Player info →</button>
     </div>
   ` : '';
   return `
@@ -1041,8 +1043,8 @@ function renderCupDetail(cup) {
   `;
 }
 
-// ── Tag Matrix view ───────────────────────────────────────────────────
-function renderMatrix(ctrl) {
+// ── Player Info view (was Tag Matrix) ─────────────────────────────────
+function renderPlayerInfo(ctrl) {
   ctrl.innerHTML = `
     <div class="mx-search-wrap" style="position:relative;flex:0 1 280px;">
       <input type="text" class="search-input" id="mxSearch" placeholder="Type your name..." style="width:100%;" autocomplete="off">
@@ -1082,6 +1084,31 @@ function renderMatrix(ctrl) {
       ${matrixPanel('Tagged by (top pursuers)', p.tag_matrix.tagged_by)}
       ${matrixPanel('Eliminations made (kills)', p.tag_matrix.elims_on)}
       ${matrixPanel('Eliminated by (their killers)', p.tag_matrix.elimd_by)}
+    </div>
+    ${renderPlayerInfoChart(p)}
+  `;
+}
+
+function renderPlayerInfoChart(p) {
+  var inRanking = DATA.ranking.players.find(x => x.steamid === p.steamid);
+  if (!inRanking) {
+    return `
+      <div class="cup-meta" style="margin-top:18px">
+        <strong>History</strong>
+        <span style="color:var(--text-muted);font-size:11px"> · no data in current ranking window (events ${DATA.ranking.window_first_event}–${DATA.ranking.window_last_event}).</span>
+      </div>`;
+  }
+  return `
+    <div class="cup-meta" style="margin-top:18px">
+      <strong>History</strong>
+      <span style="color:var(--text-muted);font-size:11px"> · cumulative ranking points across window
+      (events ${DATA.ranking.window_first_event}–${DATA.ranking.window_last_event}).
+      Gold ★ = win. Hollow dot = dropped from best-of-${DATA.ranking.best_of}.</span>
+    </div>
+    <div id="pinfoChart" class="phist-wrap" style="position:relative">
+      <canvas class="phist-canvas" data-sid="${p.steamid}" data-mode="placement"
+              style="display:block;width:100%;height:180px;cursor:crosshair"></canvas>
+      <div class="phist-tip"></div>
     </div>
   `;
 }
@@ -1172,17 +1199,20 @@ function attachHandlers() {
       }
     });
   });
-  // "Tag matrix →" link inside the expanded ranking detail
+  // "Player info →" link inside the expanded ranking detail
   document.querySelectorAll('#rankBody .rd-link').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       var sid = btn.dataset.jumpMatrix;
-      view = 'matrix';
+      view = 'playerinfo';
       matrixSelected = sid;
       setActive();
       render();
     });
   });
+  // Player Info chart
+  var pinfoCanvas = document.querySelector('#pinfoChart .phist-canvas');
+  if (pinfoCanvas) drawPlayerHistory(pinfoCanvas);
   // Events-tab sortable header
   document.querySelectorAll('#evHead [data-sort]').forEach(d => {
     d.addEventListener('click', () => {

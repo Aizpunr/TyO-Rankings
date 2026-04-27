@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated": "2026-04-27T12:34:16Z",
+    "generated": "2026-04-27T15:46:25Z",
     "total_cups": 18,
     "stub_cups": 2,
     "total_players": 174,
@@ -6728,9 +6728,9 @@
       "name": "Kernkob",
       "aliases": [],
       "cups_attended": 3,
-      "cups_won": 3,
+      "cups_won": 9,
       "podiums": {
-        "gold": 3,
+        "gold": 9,
         "silver": 0,
         "bronze": 0
       },
@@ -6807,7 +6807,15 @@
           "76561199380118922": 1
         },
         "elimd_by": {}
-      }
+      },
+      "historic_wins": [
+        3,
+        10,
+        13,
+        15,
+        18,
+        26
+      ]
     },
     {
       "steamid": "76561198149636594",
@@ -6817,9 +6825,9 @@
         "[KURK] Quickracer10"
       ],
       "cups_attended": 10,
-      "cups_won": 2,
+      "cups_won": 4,
       "podiums": {
-        "gold": 2,
+        "gold": 4,
         "silver": 4,
         "bronze": 3
       },
@@ -7023,7 +7031,11 @@
           "76561198050792757": 1,
           "76561199448462477": 1
         }
-      }
+      },
+      "historic_wins": [
+        9,
+        20
+      ]
     },
     {
       "steamid": "76561198050792757",
@@ -7032,9 +7044,9 @@
         "[BAP]justMaki"
       ],
       "cups_attended": 2,
-      "cups_won": 2,
+      "cups_won": 6,
       "podiums": {
-        "gold": 2,
+        "gold": 6,
         "silver": 0,
         "bronze": 0
       },
@@ -7095,7 +7107,13 @@
           "76561198149636594": 1
         },
         "elimd_by": {}
-      }
+      },
+      "historic_wins": [
+        1,
+        2,
+        4,
+        17
+      ]
     },
     {
       "steamid": "76561198159073318",
@@ -7398,9 +7416,9 @@
         "[OOPS]Tommygaming"
       ],
       "cups_attended": 15,
-      "cups_won": 1,
+      "cups_won": 2,
       "podiums": {
-        "gold": 1,
+        "gold": 2,
         "silver": 1,
         "bronze": 3
       },
@@ -7646,16 +7664,19 @@
           "76561199448462477": 3,
           "76561199590715014": 1
         }
-      }
+      },
+      "historic_wins": [
+        22
+      ]
     },
     {
       "steamid": "76561198896246339",
       "name": "RoundNzt",
       "aliases": [],
       "cups_attended": 7,
-      "cups_won": 1,
+      "cups_won": 5,
       "podiums": {
-        "gold": 1,
+        "gold": 5,
         "silver": 1,
         "bronze": 0
       },
@@ -7793,7 +7814,13 @@
           "76561198047727266": 1,
           "76561199448462477": 1
         }
-      }
+      },
+      "historic_wins": [
+        5,
+        7,
+        14,
+        21
+      ]
     },
     {
       "steamid": "76561199590715014",
@@ -7943,9 +7970,9 @@
         "[CTR]Mμ"
       ],
       "cups_attended": 6,
-      "cups_won": 1,
+      "cups_won": 2,
       "podiums": {
-        "gold": 1,
+        "gold": 2,
         "silver": 0,
         "bronze": 0
       },
@@ -8063,7 +8090,10 @@
           "76561199187327002": 2,
           "76561199129302746": 1
         }
-      }
+      },
+      "historic_wins": [
+        16
+      ]
     },
     {
       "steamid": "76561198430273427",
@@ -8577,9 +8607,9 @@
       "name": "Noxitu",
       "aliases": [],
       "cups_attended": 14,
-      "cups_won": 0,
+      "cups_won": 1,
       "podiums": {
-        "gold": 0,
+        "gold": 1,
         "silver": 0,
         "bronze": 0
       },
@@ -8795,7 +8825,10 @@
           "76561199380118922": 1,
           "76561199006040868": 1
         }
-      }
+      },
+      "historic_wins": [
+        19
+      ]
     },
     {
       "steamid": "76561197991251753",
@@ -11021,9 +11054,9 @@
         "[CSC]AndMe17"
       ],
       "cups_attended": 3,
-      "cups_won": 0,
+      "cups_won": 1,
       "podiums": {
-        "gold": 0,
+        "gold": 1,
         "silver": 0,
         "bronze": 0
       },
@@ -11094,7 +11127,10 @@
           "76561199024808939": 1,
           "76561198149636594": 2
         }
-      }
+      },
+      "historic_wins": [
+        12
+      ]
     },
     {
       "steamid": "76561198748988602",
@@ -11397,9 +11433,9 @@
         "[KBW]rtube"
       ],
       "cups_attended": 3,
-      "cups_won": 0,
+      "cups_won": 1,
       "podiums": {
-        "gold": 0,
+        "gold": 1,
         "silver": 0,
         "bronze": 0
       },
@@ -11468,7 +11504,10 @@
           "76561198041494034": 1,
           "76561198149636594": 2
         }
-      }
+      },
+      "historic_wins": [
+        8
+      ]
     },
     {
       "steamid": "76561198136572067",
@@ -23854,7 +23893,7 @@
         "wins": 52,
         "losses": 2,
         "draws": 0,
-        "gold": 3,
+        "gold": 9,
         "silver": 0,
         "bronze": 0,
         "history": [
@@ -23895,7 +23934,7 @@
         "wins": 114,
         "losses": 33,
         "draws": 0,
-        "gold": 2,
+        "gold": 4,
         "silver": 4,
         "bronze": 3,
         "history": [
@@ -23992,7 +24031,7 @@
         "wins": 32,
         "losses": 2,
         "draws": 0,
-        "gold": 2,
+        "gold": 6,
         "silver": 0,
         "bronze": 0,
         "history": [
@@ -24074,7 +24113,7 @@
         "wins": 60,
         "losses": 30,
         "draws": 0,
-        "gold": 1,
+        "gold": 5,
         "silver": 1,
         "bronze": 0,
         "history": [
@@ -24196,7 +24235,7 @@
         "wins": 108,
         "losses": 78,
         "draws": 5,
-        "gold": 1,
+        "gold": 2,
         "silver": 1,
         "bronze": 3,
         "history": [
@@ -24974,7 +25013,7 @@
         "wins": 20,
         "losses": 12,
         "draws": 0,
-        "gold": 0,
+        "gold": 1,
         "silver": 0,
         "bronze": 0,
         "history": [
@@ -25113,7 +25152,7 @@
         "wins": 36,
         "losses": 26,
         "draws": 3,
-        "gold": 1,
+        "gold": 2,
         "silver": 0,
         "bronze": 0,
         "history": [
@@ -25446,7 +25485,7 @@
         "wins": 17,
         "losses": 11,
         "draws": 0,
-        "gold": 0,
+        "gold": 1,
         "silver": 0,
         "bronze": 0,
         "history": [
@@ -26954,7 +26993,7 @@
         "wins": 37,
         "losses": 54,
         "draws": 1,
-        "gold": 0,
+        "gold": 1,
         "silver": 0,
         "bronze": 0,
         "history": [

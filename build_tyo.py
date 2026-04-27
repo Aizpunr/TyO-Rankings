@@ -19,7 +19,7 @@ from math import inf
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-from tyo_aliases import resolve, NAME_MAP
+from tyo_aliases import resolve, NAME_MAP, _strip_tag
 
 _dir = os.path.dirname(os.path.abspath(__file__))
 LOGS_DIR = os.path.join(_dir, 'logs')
@@ -651,6 +651,56 @@ def compute_elo_ranking(cups_real):
     }
 
 
+# ── Historic wins (events with no log) ───────────────────────────────────
+
+def attribute_historic_wins(events_meta, real_event_nums, players, ranking_elo):
+    """For events present in events.md but with no JSON log, credit the
+    declared winner's cup-win on the matching player by name. Updates
+    `players[].cups_won` + `podiums.gold`, and `ranking_elo.players[].gold`
+    when the same steamID is present. ELO ratings are NOT affected — those
+    are computed before this runs and never touched here.
+
+    Returns (matched, unmatched) lists for reporting.
+    """
+    historic = sorted(e for e in events_meta if e not in real_event_nums)
+    if not historic:
+        return [], []
+
+    # name(any case) -> steamid lookup, drawn from canonical + observed aliases
+    name_to_sid = {}
+    for p in players:
+        for n in [p['name']] + list(p.get('aliases', [])):
+            if n:
+                name_to_sid[n.lower()] = p['steamid']
+                stripped = _strip_tag(n).lower()
+                if stripped:
+                    name_to_sid.setdefault(stripped, p['steamid'])
+
+    elo_by_sid = {r['steamid']: r for r in ranking_elo.get('players', [])}
+    player_by_sid = {p['steamid']: p for p in players}
+
+    matched, unmatched = [], []
+    for evt in historic:
+        winner = (events_meta[evt].get('winner') or '').strip()
+        if not winner:
+            continue
+        canonical = NAME_MAP.get(winner, winner)
+        sid = (name_to_sid.get(winner.lower())
+               or name_to_sid.get(canonical.lower())
+               or name_to_sid.get(_strip_tag(winner).lower()))
+        if sid is None:
+            unmatched.append((evt, winner))
+            continue
+        p = player_by_sid[sid]
+        p['cups_won'] += 1
+        p['podiums']['gold'] += 1
+        p.setdefault('historic_wins', []).append(evt)
+        if sid in elo_by_sid:
+            elo_by_sid[sid]['gold'] += 1
+        matched.append((evt, winner, p['name']))
+    return matched, unmatched
+
+
 # ── Verification ─────────────────────────────────────────────────────────
 
 def verify(cups_real, players, events_meta):
@@ -791,6 +841,12 @@ def main():
     ranking = compute_ranking(players, cups_real)
     ranking_elo = compute_elo_ranking(cups_real)
 
+    # Historic wins (events 1-22 + 26 from events.md). Run AFTER ELO so the
+    # rating math sees only real cups, but mutates the displayed gold counts.
+    historic_matched, historic_unmatched = attribute_historic_wins(
+        events_meta, real_event_nums, players, ranking_elo
+    )
+
     # Verification
     warnings, cross_mismatches, fmt_counts = verify(cups_real, players, events_meta)
     elo_warnings = verify_elo(ranking_elo, players, cups_real)
@@ -853,6 +909,15 @@ def main():
         print(f"  Ranking window: events {ranking['window_first_event']}-"
               f"{ranking['window_last_event']} ({ranking['window']}), "
               f"best-of-{ranking['best_of']}")
+
+    # Historic wins summary
+    h_total = len(historic_matched) + len(historic_unmatched)
+    if h_total:
+        print(f"  Historic wins credited: {len(historic_matched)}/{h_total}")
+        if historic_unmatched:
+            print('    Unmatched (no logged steamID for winner name):')
+            for evt, winner in historic_unmatched:
+                print(f'      event #{evt}: {winner}')
 
     # ELO summary
     n_elo = len(ranking_elo.get('players', []))
