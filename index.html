@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tag You're Out — Leaderboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --green:#10b981; --red:#ef4444; --mono:'JetBrains Mono',monospace;
+        --gold:#f59e0b; --silver:#cbd5e1; --bronze:#b45309; }
+[data-theme="dark"] { --accent:#f59e0b; --bg:#08080d; --surface:rgba(255,255,255,0.02);
+  --border:rgba(255,255,255,0.06); --border-bright:rgba(255,255,255,0.08);
+  --text:#e5e7eb; --text-dim:#9ca3af; --text-muted:#6b7280; --text-dark:#4b5563;
+  --surface-hover:rgba(255,255,255,0.05); --row-hover:rgba(255,255,255,0.03);
+  --row-border:rgba(255,255,255,0.03); --scrollbar:rgba(255,255,255,0.1);
+  --btn-hover:rgba(255,255,255,0.3); --tooltip-bg:rgba(10,10,15,0.95);
+  --tooltip-border:rgba(255,255,255,0.15); --row-stripe:rgba(255,255,255,0.015); }
+[data-theme="light"] { --accent:#b45309; --bg:#f5f5f7; --surface:rgba(0,0,0,0.02);
+  --border:rgba(0,0,0,0.08); --border-bright:rgba(0,0,0,0.12);
+  --text:#1f2937; --text-dim:#4b5563; --text-muted:#6b7280; --text-dark:#9ca3af;
+  --surface-hover:rgba(0,0,0,0.05); --row-hover:rgba(0,0,0,0.03);
+  --row-border:rgba(0,0,0,0.05); --scrollbar:rgba(0,0,0,0.15);
+  --btn-hover:rgba(0,0,0,0.3); --tooltip-bg:rgba(255,255,255,0.95);
+  --tooltip-border:rgba(0,0,0,0.15); --row-stripe:rgba(0,0,0,0.02); }
+
+html { background: var(--bg); color: var(--text); }
+body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; padding: 20px 12px; }
+::selection { background: rgba(245,158,11,0.3); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+.container { max-width: 1080px; margin: 0 auto; }
+
+.header { text-align: center; margin-bottom: 28px; position: relative; }
+.header h1 {
+  font-size: 28px; font-weight: 800; margin: 0;
+  background: linear-gradient(135deg, #ef4444, #f59e0b, #10b981);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.header .sub { font-family: var(--mono); font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.theme-toggle {
+  position: absolute; top: 8px; right: 0;
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 10px; cursor: pointer;
+  font-size: 16px; line-height: 1; transition: border-color 0.15s;
+}
+.theme-toggle:hover { border-color: var(--btn-hover); }
+
+.controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
+  position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 8px 0; }
+.tabs { display: flex; gap: 3px; background: var(--surface-hover); border-radius: 8px; padding: 3px; }
+.tab {
+  padding: 6px 16px; border-radius: 6px; border: none; font-size: 12px;
+  font-family: var(--mono); font-weight: 600; cursor: pointer;
+  background: transparent; color: var(--text-muted); transition: all 0.15s;
+}
+.tab.active { background: rgba(245,158,11,0.2); color: var(--accent); }
+.tab:hover:not(.active) { color: var(--text-dim); }
+
+.mode-tabs {
+  display: inline-flex; gap: 2px; background: var(--surface-hover);
+  border-radius: 6px; padding: 2px; margin-right: 8px;
+}
+.mtab {
+  padding: 4px 10px; border-radius: 4px; border: none; font-size: 10px;
+  font-family: var(--mono); font-weight: 600; cursor: pointer;
+  background: transparent; color: var(--text-muted); transition: all 0.15s;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.mtab.active { background: rgba(245,158,11,0.2); color: var(--accent); }
+.mtab:hover:not(.active) { color: var(--text-dim); }
+
+.search-input {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 10px; font-size: 11px;
+  font-family: var(--mono); color: var(--text); outline: none;
+  width: 180px; transition: border-color 0.15s;
+}
+.search-input::placeholder { color: var(--text-dark); }
+.search-input:focus { border-color: rgba(245,158,11,0.4); }
+
+.select-input {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 10px; font-size: 11px;
+  font-family: var(--mono); color: var(--text); outline: none;
+  cursor: pointer; max-width: 360px;
+}
+
+/* Generic table-grid pattern */
+.tg { display: grid; align-items: center; }
+.tg-head {
+  display: grid; padding: 8px 12px; font-family: var(--mono); font-size: 10px;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-bright);
+}
+.tg-head div { cursor: pointer; user-select: none; }
+.tg-head div:hover { color: var(--text-dim); }
+.tg-head .sort-arrow { color: var(--accent); margin-left: 3px; }
+
+.row {
+  display: grid; padding: 7px 12px; border-bottom: 1px solid var(--row-border);
+  font-size: 13px; cursor: pointer; transition: background 0.1s; align-items: center;
+}
+.row:hover { background: var(--row-hover); }
+.row.selected { background: rgba(245,158,11,0.06); }
+.row.stub { opacity: 0.55; }
+
+.rank { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+.pname { font-weight: 600; font-size: 13px; }
+.player { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.player .pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+.detail {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 14px 16px; animation: slideDown 0.15s ease-out;
+}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+.rd-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 10px; margin-bottom: 10px;
+  background: var(--surface); border: 1px solid var(--border-bright); border-radius: 8px;
+  flex-wrap: wrap;
+}
+.rd-stats {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 11px; color: var(--text);
+}
+.rd-stats > span { display: inline-flex; gap: 4px; align-items: baseline; }
+.rd-label {
+  color: var(--text-muted); font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rd-link {
+  background: var(--surface-hover); border: 1px solid var(--border-bright);
+  color: var(--accent); border-radius: 6px; padding: 5px 10px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.rd-link:hover { border-color: var(--accent); background: rgba(245,158,11,0.08); }
+
+.phist-wrap { margin-top: 6px; }
+.phist-tip {
+  display: none; position: absolute; pointer-events: none; z-index: 10;
+  background: var(--tooltip-bg); border: 1px solid var(--tooltip-border);
+  border-radius: 6px; padding: 6px 9px;
+  font-family: var(--mono); font-size: 10px; color: var(--text-dim);
+  white-space: nowrap; line-height: 1.5;
+}
+.phist-tip .t-head { color: var(--text); font-weight: 700; margin-bottom: 2px; }
+.phist-tip .t-line { font-size: 10px; }
+
+.footer { margin-top: 24px; padding: 16px 0 8px; border-top: 1px solid var(--border);
+  font-family: var(--mono); font-size: 10px; color: var(--text-dark); text-align: center; line-height: 1.6; }
+.footer-link { display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); text-decoration: none; transition: color 0.15s; }
+.footer-link:hover { color: var(--accent); }
+.footer-link.yt:hover { color: #ff0000; }
+.footer-link.tw:hover { color: #9146ff; }
+.footer-link.dc:hover { color: #5865f2; }
+
+.gold-name { color: var(--gold); }
+.silver-name { color: var(--silver); }
+.bronze-name { color: var(--bronze); }
+
+.badge {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.badge.roulette { background: rgba(168,85,247,0.15); color: #a855f7; }
+.badge.non_standard { background: rgba(239,68,68,0.15); color: #ef4444; }
+.badge.stub { background: rgba(107,114,128,0.2); color: var(--text-muted); }
+
+.info-tip-wrap { position: relative; display: inline-flex; align-items: center; }
+.info-btn {
+  background: none; border: 1px solid var(--border-bright); color: var(--text-muted);
+  border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 11px;
+  font-family: var(--mono); margin-left: 4px; transition: all 0.15s; line-height: 1;
+}
+.info-btn:hover { border-color: var(--btn-hover); color: var(--accent); }
+.info-tip {
+  display: none; position: absolute; top: 100%; left: 0; margin-top: 8px;
+  background: var(--tooltip-bg); border: 1px solid var(--tooltip-border);
+  border-radius: 8px; padding: 10px 14px; font-family: var(--mono); font-size: 10px;
+  color: var(--text-dim); width: 320px; z-index: 30; line-height: 1.7; text-align: left;
+}
+.info-tip code { color: var(--accent); }
+.info-tip-wrap:hover .info-tip { display: block; }
+
+/* Cup detail */
+.cup-meta { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 10px; }
+.cup-meta strong { color: var(--text); }
+.maps-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.map-pill {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 3px 8px; font-family: var(--mono); font-size: 10px; color: var(--text-dim);
+}
+.map-pill .auth { color: var(--text-muted); }
+
+.tie-bucket {
+  display: grid; padding: 6px 12px; border-bottom: 1px dashed var(--row-border);
+  font-size: 12px; gap: 8px; align-items: center;
+}
+
+/* Tag matrix */
+.tm-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;
+}
+.tm-panel {
+  background: var(--surface); border: 1px solid var(--border-bright);
+  border-radius: 10px; padding: 12px 14px;
+}
+.tm-panel h3 { font-size: 12px; color: var(--text-dim); font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 700; }
+.tm-row {
+  display: grid; grid-template-columns: 1fr 50px;
+  padding: 4px 0; border-bottom: 1px solid var(--row-border); font-size: 12px;
+}
+.tm-row .tm-name { font-weight: 600; }
+.tm-row .tm-cnt { font-family: var(--mono); color: var(--accent); text-align: right; }
+
+.mx-suggestions {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--bg); border: 1px solid var(--border-bright); border-radius: 8px;
+  max-height: 300px; overflow-y: auto; z-index: 25;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.mx-sugg-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 10px; cursor: pointer; border-bottom: 1px solid var(--row-border);
+  font-size: 12px;
+}
+.mx-sugg-row:last-child { border-bottom: none; }
+.mx-sugg-row:hover { background: var(--row-hover); }
+.mx-sugg-name { color: var(--text); font-weight: 600; }
+.mx-sugg-meta { color: var(--text-muted); font-family: var(--mono); font-size: 10px; }
+.mx-sugg-empty { padding: 10px; color: var(--text-muted); font-family: var(--mono); font-size: 11px; text-align: center; }
+
+.tm-summary {
+  display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border-bright); border-radius: 10px;
+  font-family: var(--mono); font-size: 11px;
+}
+.tm-summary .stat { display: flex; flex-direction: column; }
+.tm-summary .stat .label { color: var(--text-muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+.tm-summary .stat .value { color: var(--text); font-size: 14px; font-weight: 700; }
+
+@media(max-width:700px) {
+  .tm-grid { grid-template-columns: 1fr; }
+  .container { padding: 0 4px; }
+}
+</style>
+<script>
+(function(){
+  var t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Tag You're Out</h1>
+    <div class="sub" id="subInfo">loading...</div>
+    <button class="theme-toggle" id="themeToggle" title="Toggle light/dark"></button>
+  </div>
+
+  <div class="controls">
+    <div class="tabs" id="topTabs">
+      <button class="tab active" data-view="ranking">Ranking</button>
+      <button class="tab" data-view="events">Events</button>
+      <button class="tab" data-view="matrix">Tag Matrix</button>
+    </div>
+    <div id="ctrlExtras" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto;"></div>
+  </div>
+
+  <div id="content"></div>
+
+  <div class="footer">
+    <div style="display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap">
+      <a href="https://www.youtube.com/@_agix_" target="_blank" rel="noopener" class="footer-link yt">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        agix
+      </a>
+      <a href="https://www.twitch.tv/gualexitar" target="_blank" rel="noopener" class="footer-link tw">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>
+        GuAlexItar
+      </a>
+      <a href="https://discord.gg/qadVDXBR" target="_blank" rel="noopener" class="footer-link dc">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.947 2.418-2.157 2.418z"/></svg>
+        CSC Discord
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Theme ─────────────────────────────────────────────────────────────
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+  var btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  var btn = document.getElementById('themeToggle');
+  btn.textContent = cur === 'dark' ? '☀️' : '🌙';
+  btn.addEventListener('click', function(){
+    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+});
+
+// ── State ─────────────────────────────────────────────────────────────
+let DATA = null;
+let SID2NAME = {};
+let view = 'ranking';
+let rankMode = 'placement';                   // 'placement' | 'elo'
+let rankingSort = { col: 'points', dir: -1 }; // re-init when switching mode
+let eventSort = { col: 'event', dir: -1 };    // newest first
+let eventExpanded = null;                     // event# currently open
+let matrixSelected = null;
+
+// ── Load + dispatch ───────────────────────────────────────────────────
+fetch('tyo.json?v=' + Date.now())
+  .then(r => r.json())
+  .then(d => {
+    DATA = d;
+    SID2NAME = {};
+    d.players.forEach(p => SID2NAME[p.steamid] = p.name);
+    document.getElementById('subInfo').textContent =
+      `${d.meta.total_cups} cups · ${d.meta.total_players} players · ranking window: events ${d.ranking.window_first_event}-${d.ranking.window_last_event} (best ${d.ranking.best_of} of ${d.ranking.window})`;
+    matrixSelected = d.ranking.players[0] && d.ranking.players[0].steamid;
+    document.querySelectorAll('#topTabs .tab').forEach(b => {
+      b.addEventListener('click', () => { view = b.dataset.view; setActive(); render(); });
+    });
+    setActive();
+    render();
+  })
+  .catch(err => {
+    document.getElementById('content').innerHTML =
+      `<div style="color:var(--red);font-family:var(--mono);padding:20px">Failed to load tyo.json: ${err}</div>`;
+  });
+
+function setActive() {
+  document.querySelectorAll('#topTabs .tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+}
+
+// ── Render dispatch ───────────────────────────────────────────────────
+function render() {
+  var ctrl = document.getElementById('ctrlExtras');
+  ctrl.innerHTML = '';
+  var content = document.getElementById('content');
+  if (view === 'ranking') content.innerHTML = renderRanking(ctrl);
+  else if (view === 'events') content.innerHTML = renderEvents(ctrl);
+  else if (view === 'matrix') content.innerHTML = renderMatrix(ctrl);
+  attachHandlers();
+}
+
+// ── Ranking view ──────────────────────────────────────────────────────
+const RANK_PLACEMENT_COLS = '40px 1fr 70px 50px 70px 50px 50px';
+const RANK_ELO_COLS       = '40px 1fr 70px 60px 50px 70px 90px 70px';
+function renderRanking(ctrl) {
+  var modeTabs =
+    `<div class="mode-tabs" id="modeTabs">
+       <button class="mtab ${rankMode==='placement'?'active':''}" data-mode="placement">Placement</button>
+       <button class="mtab ${rankMode==='elo'?'active':''}"        data-mode="elo">ELO</button>
+     </div>`;
+  ctrl.innerHTML =
+    modeTabs +
+    `<input type="text" class="search-input" id="rankSearch" placeholder="Search player...">` +
+    rankInfoTip();
+  var rows;
+  var headHtml;
+  if (rankMode === 'placement') {
+    rows = DATA.ranking.players.slice();
+    if (rankingSort.col !== 'rank' && !['name','points','cups_in_window','podiums','tags','elims'].includes(rankingSort.col)) {
+      rankingSort = { col: 'points', dir: -1 };
+    }
+    rows.sort(rankSorter(rankingSort));
+    headHtml = `
+      <div class="tg-head" style="grid-template-columns:${RANK_PLACEMENT_COLS};">
+        <div data-sort="rank">#${arrow('rank')}</div>
+        <div data-sort="name">Player${arrow('name')}</div>
+        <div data-sort="points" style="text-align:right">Pts${arrow('points')}</div>
+        <div data-sort="cups_in_window" style="text-align:right">Cups${arrow('cups_in_window')}</div>
+        <div data-sort="podiums" style="text-align:right" title="gold/silver/bronze">Pod${arrow('podiums')}</div>
+        <div data-sort="tags" style="text-align:right">Tags${arrow('tags')}</div>
+        <div data-sort="elims" style="text-align:right">Elim${arrow('elims')}</div>
+      </div>`;
+  } else {
+    var src = (DATA.ranking_elo || {}).players || [];
+    rows = src.slice();
+    if (!['rank','name','rating','peak','cups','winpct','wld','podiums'].includes(rankingSort.col)) {
+      rankingSort = { col: 'rating', dir: -1 };
+    }
+    rows.sort(eloSorter(rankingSort));
+    headHtml = `
+      <div class="tg-head" style="grid-template-columns:${RANK_ELO_COLS};">
+        <div data-sort="rank">#${arrow('rank')}</div>
+        <div data-sort="name">Player${arrow('name')}</div>
+        <div data-sort="rating" style="text-align:right">Rating${arrow('rating')}</div>
+        <div data-sort="peak" style="text-align:right">Peak${arrow('peak')}</div>
+        <div data-sort="cups" style="text-align:right">Cups${arrow('cups')}</div>
+        <div data-sort="winpct" style="text-align:right" title="wins / total pair matchups">Win%${arrow('winpct')}</div>
+        <div data-sort="wld" style="text-align:right" title="W = times you tagged your target&#10;L = times your pursuer tagged you&#10;D = double DNF (no one was strictly faster)">W-L-D${arrow('wld')}</div>
+        <div data-sort="podiums" style="text-align:right" title="gold/silver/bronze">Pod${arrow('podiums')}</div>
+      </div>`;
+  }
+  var q = '';
+  setTimeout(() => {
+    var inp = document.getElementById('rankSearch');
+    if (inp) inp.addEventListener('input', e => {
+      q = e.target.value.toLowerCase();
+      document.getElementById('rankBody').innerHTML = renderRankRows(rows, q);
+      attachHandlers();
+    });
+    document.querySelectorAll('#modeTabs .mtab').forEach(b => {
+      b.addEventListener('click', () => {
+        if (rankMode === b.dataset.mode) return;
+        rankMode = b.dataset.mode;
+        rankingSort = (rankMode === 'placement')
+          ? { col: 'points', dir: -1 }
+          : { col: 'rating', dir: -1 };
+        render();
+      });
+    });
+  }, 0);
+  return headHtml + `<div id="rankBody">${renderRankRows(rows, q)}</div>`;
+}
+
+function rankInfoTip() {
+  if (rankMode === 'placement') {
+    return `<span class="info-tip-wrap">
+       <button class="info-btn">ℹ</button>
+       <div class="info-tip">
+         <strong>Scoring</strong><br>
+         Pure placement points — no win bonus, no tag/elim contribution.<br>
+         Top 20 finishers score: <code>${DATA.ranking.params.placement_pts.join('/')}</code>. 21st+ scores 0.<br>
+         Window: last <code>${DATA.ranking.window}</code> non-stub cups, best <code>${DATA.ranking.best_of}</code> count.<br>
+         Missed cups don't penalize.
+       </div>
+     </span>`;
+  }
+  var p = (DATA.ranking_elo || {}).params || {};
+  return `<span class="info-tip-wrap">
+     <button class="info-btn">ℹ</button>
+     <div class="info-tip">
+       <strong>ELO</strong><br>
+       Pair-based ELO over every round's pursuer-target 1v1 — TyO is literally
+       pairwise competition, so a lobby-quality multiplier would double-count.<br>
+       Start <code>${p.starting||1500}</code>, K=<code>${p.k_pair||8}</code> per pair,
+       provisional <code>×${p.prov_mult||1.5}</code> for first <code>${p.prov_cups||6}</code>
+       cups, no decay.<br>
+       Showing players with <code>≥${p.min_cups_display||2}</code> cups attended.
+     </div>
+   </span>`;
+}
+function arrow(c) { return rankingSort.col === c ? `<span class="sort-arrow">${rankingSort.dir<0?'▼':'▲'}</span>` : ''; }
+function rankSorter(s) {
+  return (a, b) => {
+    let va, vb;
+    if (s.col === 'name') { va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+      return s.dir * (va < vb ? -1 : va > vb ? 1 : 0); }
+    if (s.col === 'podiums') { va = a.podiums.gold*100 + a.podiums.silver*10 + a.podiums.bronze;
+      vb = b.podiums.gold*100 + b.podiums.silver*10 + b.podiums.bronze; }
+    else if (s.col === 'tags') {
+      va = a.history.reduce((t,h)=>t+(h.tags||0),0); vb = b.history.reduce((t,h)=>t+(h.tags||0),0);
+    } else if (s.col === 'elims') {
+      va = a.history.reduce((t,h)=>t+(h.elims||0),0); vb = b.history.reduce((t,h)=>t+(h.elims||0),0);
+    } else { va = a[s.col]; vb = b[s.col]; }
+    return s.dir * (va - vb);
+  };
+}
+function winPct(r) {
+  return r.pairs ? r.wins / r.pairs : 0;
+}
+function eloSorter(s) {
+  return (a, b) => {
+    let va, vb;
+    if (s.col === 'name') { va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+      return s.dir * (va < vb ? -1 : va > vb ? 1 : 0); }
+    if (s.col === 'winpct')       { va = winPct(a); vb = winPct(b); }
+    else if (s.col === 'wld')     { va = a.wins - a.losses; vb = b.wins - b.losses; }
+    else if (s.col === 'podiums') { va = a.gold*100 + a.silver*10 + a.bronze;
+                                    vb = b.gold*100 + b.silver*10 + b.bronze; }
+    else                          { va = a[s.col]; vb = b[s.col]; }
+    return s.dir * (va - vb);
+  };
+}
+function renderRankRows(rows, q) {
+  if (rankMode === 'placement') {
+    return rows.filter(r => !q || r.name.toLowerCase().includes(q)).map((r, i) => {
+      var pod = r.podiums;
+      var tagSum = r.history.reduce((t,h)=>t+(h.tags||0),0);
+      var elimSum = r.history.reduce((t,h)=>t+(h.elims||0),0);
+      var nameClass = pod.gold ? 'gold-name' : '';
+      return `
+        <div class="row" data-sid="${r.steamid}" style="grid-template-columns:${RANK_PLACEMENT_COLS};">
+          <div class="rank">${i + 1}</div>
+          <div class="player"><span class="pname ${nameClass}">${escapeHtml(r.name)}</span></div>
+          <div style="text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700">${r.points}</div>
+          <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups_in_window}</div>
+          <div style="text-align:right;font-family:var(--mono)">
+            <span style="color:var(--gold)">${pod.gold}</span>/<span style="color:var(--silver)">${pod.silver}</span>/<span style="color:var(--bronze)">${pod.bronze}</span>
+          </div>
+          <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${tagSum}</div>
+          <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${elimSum}</div>
+        </div>
+        <div class="detail" id="rd-${r.steamid}" style="display:none">
+          ${renderRankDetail(r)}
+        </div>
+      `;
+    }).join('');
+  }
+  // ELO mode
+  return rows.filter(r => !q || r.name.toLowerCase().includes(q)).map((r, i) => {
+    var nameClass = r.gold ? 'gold-name' : '';
+    return `
+      <div class="row" data-sid="${r.steamid}" style="grid-template-columns:${RANK_ELO_COLS};">
+        <div class="rank">${i + 1}</div>
+        <div class="player"><span class="pname ${nameClass}">${escapeHtml(r.name)}</span></div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700">${r.rating.toFixed(1)}</div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.peak.toFixed(1)}</div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups}</div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${(winPct(r) * 100).toFixed(1)}%</div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">
+          <span style="color:var(--green)">${r.wins}</span>-<span style="color:var(--red)">${r.losses}</span>-<span style="color:var(--text-muted)">${r.draws}</span>
+        </div>
+        <div style="text-align:right;font-family:var(--mono)">
+          <span style="color:var(--gold)">${r.gold}</span>/<span style="color:var(--silver)">${r.silver}</span>/<span style="color:var(--bronze)">${r.bronze}</span>
+        </div>
+      </div>
+      <div class="detail" id="rd-${r.steamid}" style="display:none">
+        ${renderRankDetailElo(r)}
+      </div>
+    `;
+  }).join('');
+}
+function renderRankDetail(r) {
+  var p = DATA.players.find(x => x.steamid === r.steamid);
+  var pod = p ? p.podiums : { gold: 0, silver: 0, bronze: 0 };
+  var careerLine = p ? `
+    <div class="rd-summary">
+      <div class="rd-stats">
+        <span><span class="rd-label">Career</span> ${p.cups_attended} cups</span>
+        <span><span class="rd-label">Wins</span> <strong style="color:var(--gold)">${p.cups_won}</strong></span>
+        <span><span class="rd-label">G/S/B</span> ${pod.gold}/${pod.silver}/${pod.bronze}</span>
+        <span><span class="rd-label">Tags</span> ${p.tags_made_total}</span>
+        <span><span class="rd-label">Elims</span> ${p.eliminations_made_total}</span>
+        <span><span class="rd-label">Eliminated</span> ${p.times_eliminated_total}×</span>
+      </div>
+      <button class="rd-link" data-jump-matrix="${r.steamid}">Tag matrix →</button>
+    </div>
+  ` : '';
+  return `
+    ${careerLine}
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:6px">
+      Cumulative ranking points across window
+      (events ${DATA.ranking.window_first_event}–${DATA.ranking.window_last_event}).
+      Hover for per-event details. Gold ★ = win. Hollow dot = dropped from best-of-${DATA.ranking.best_of}.
+    </div>
+    <div class="phist-wrap" style="position:relative">
+      <canvas class="phist-canvas" data-sid="${r.steamid}" data-mode="placement"
+              style="display:block;width:100%;height:180px;cursor:crosshair"></canvas>
+      <div class="phist-tip"></div>
+    </div>
+  `;
+}
+
+function renderRankDetailElo(r) {
+  var p = DATA.players.find(x => x.steamid === r.steamid);
+  var careerLine = p ? `
+    <div class="rd-summary">
+      <div class="rd-stats">
+        <span><span class="rd-label">Rating</span> <strong style="color:var(--accent)">${r.rating.toFixed(1)}</strong></span>
+        <span><span class="rd-label">Peak</span> ${r.peak.toFixed(1)}</span>
+        <span><span class="rd-label">Cups</span> ${r.cups}</span>
+        <span><span class="rd-label">W-L-D</span>
+          <span style="color:var(--green)">${r.wins}</span>-<span style="color:var(--red)">${r.losses}</span>-${r.draws}</span>
+        <span><span class="rd-label">G/S/B</span> ${r.gold}/${r.silver}/${r.bronze}</span>
+      </div>
+      <button class="rd-link" data-jump-matrix="${r.steamid}">Tag matrix →</button>
+    </div>
+  ` : '';
+  return `
+    ${careerLine}
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:6px">
+      Rating across attended events. Dashed line = starting rating (1500). Gold ★ = win.
+      Hover for per-event details.
+    </div>
+    <div class="phist-wrap" style="position:relative">
+      <canvas class="phist-canvas" data-sid="${r.steamid}" data-mode="elo"
+              style="display:block;width:100%;height:180px;cursor:crosshair"></canvas>
+      <div class="phist-tip"></div>
+    </div>
+  `;
+}
+
+function drawPlayerHistory(canvas) {
+  var mode = canvas.dataset.mode || 'placement';
+  if (mode === 'elo') return drawEloHistory(canvas);
+  return drawPlacementHistory(canvas);
+}
+
+function drawPlacementHistory(canvas) {
+  var sid = canvas.dataset.sid;
+  var rp = DATA.ranking.players.find(x => x.steamid === sid);
+  if (!rp) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  if (rect.width === 0) return; // not visible yet
+  canvas.width = rect.width * dpr;
+  canvas.height = 180 * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  var W = rect.width, H = 180;
+  var pad = { l: 38, r: 12, t: 10, b: 22 };
+
+  var firstE = DATA.ranking.window_first_event;
+  var lastE = DATA.ranking.window_last_event;
+  var hist = rp.history.slice().sort((a, b) => a.event - b.event);
+
+  // Per-attended-event cumulative (counted-only contributes)
+  var cum = 0;
+  var pts = hist.map(h => {
+    if (h.counted) cum += h.points;
+    return { event: h.event, place: h.placement, eventPts: h.points,
+             counted: h.counted, tags: h.tags || 0, elims: h.elims || 0,
+             cum: cum };
+  });
+
+  // y-axis: 0 to nice round above counted total
+  var yMax = Math.max(rp.points, 100);
+  yMax = Math.ceil(yMax / 100) * 100;
+
+  function xf(e) { return pad.l + (e - firstE) / Math.max(1, lastE - firstE) * (W - pad.l - pad.r); }
+  function yf(v) { return pad.t + (1 - v / yMax) * (H - pad.t - pad.b); }
+
+  function draw(highlight) {
+    ctx.clearRect(0, 0, W, H);
+
+    // Y grid + labels
+    ctx.strokeStyle = cssVar('--border');
+    ctx.lineWidth = 1;
+    ctx.font = "9px 'JetBrains Mono', monospace";
+    ctx.textAlign = 'right';
+    for (var i = 0; i <= 4; i++) {
+      var v = Math.round(yMax * i / 4);
+      var y = yf(v);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y);
+      ctx.stroke();
+      ctx.fillStyle = cssVar('--text-muted');
+      ctx.fillText(v, pad.l - 5, y + 3);
+    }
+
+    // X axis labels
+    ctx.fillStyle = cssVar('--text-muted');
+    ctx.textAlign = 'center';
+    for (var e = firstE; e <= lastE; e++) {
+      ctx.fillText(e, xf(e), H - 6);
+    }
+
+    if (!pts.length) return;
+
+    var accent = cssVar('--accent') || '#f59e0b';
+
+    // Direct diagonal line through attended events.
+    function tracePath() {
+      ctx.beginPath();
+      pts.forEach((pt, i) => {
+        var x = xf(pt.event), y = yf(pt.cum);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+    }
+
+    // Glow
+    ctx.save();
+    ctx.globalAlpha = 0.10; ctx.lineWidth = 6; ctx.strokeStyle = accent; ctx.lineJoin = 'round';
+    tracePath();
+    ctx.stroke();
+    ctx.restore();
+
+    // Main line
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    tracePath();
+    ctx.stroke();
+
+    // Dots / stars per attended event
+    pts.forEach(pt => {
+      var x = xf(pt.event), y = yf(pt.cum);
+      var hl = highlight && highlight.event === pt.event;
+      if (pt.place === 1) {
+        var r = hl ? 8 : 5.5;
+        ctx.beginPath();
+        for (var k = 0; k < 10; k++) {
+          var ang = -Math.PI / 2 + k * Math.PI / 5;
+          var rad = k % 2 === 0 ? r : r * 0.45;
+          ctx[k === 0 ? 'moveTo' : 'lineTo'](x + Math.cos(ang) * rad, y + Math.sin(ang) * rad);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ffd700';
+        ctx.fill();
+        ctx.strokeStyle = '#b8960c';
+        ctx.lineWidth = hl ? 1.5 : 1;
+        ctx.stroke();
+      } else if (pt.counted) {
+        ctx.beginPath();
+        ctx.arc(x, y, hl ? 5 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = accent;
+        ctx.fill();
+        if (hl) {
+          ctx.strokeStyle = cssVar('--text');
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      } else {
+        // Dropped: hollow
+        ctx.beginPath();
+        ctx.arc(x, y, hl ? 5 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = cssVar('--bg');
+        ctx.fill();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    });
+  }
+
+  draw(null);
+
+  // Tooltip
+  var tip = canvas.parentElement.querySelector('.phist-tip');
+  canvas.onmousemove = function (e) {
+    var br = canvas.getBoundingClientRect();
+    var mx = e.clientX - br.left;
+    var closest = null, minDist = Infinity;
+    pts.forEach(pt => {
+      var d = Math.abs(xf(pt.event) - mx);
+      if (d < minDist) { minDist = d; closest = pt; }
+    });
+    if (closest && minDist < 28) {
+      tip.style.display = 'block';
+      tip.innerHTML =
+        `<div class="t-head">Event #${closest.event}</div>` +
+        `<div class="t-line">${ordinal(closest.place)}${closest.counted ? '' : ' · <span style="color:var(--text-muted)">dropped</span>'}</div>` +
+        `<div class="t-line">+${closest.eventPts} pts → <span style="color:var(--accent)">${closest.cum}</span> total</div>` +
+        `<div class="t-line" style="color:var(--text-muted);font-size:10px">${closest.tags}t / ${closest.elims}e</div>`;
+      var tx = xf(closest.event) + 12;
+      var ty = yf(closest.cum) - 30;
+      // Keep on-canvas
+      var tw = tip.offsetWidth, th = tip.offsetHeight;
+      if (tx + tw > W) tx = xf(closest.event) - tw - 12;
+      if (ty < 0) ty = 4;
+      tip.style.left = tx + 'px';
+      tip.style.top = ty + 'px';
+      draw(closest);
+    } else {
+      tip.style.display = 'none';
+      draw(null);
+    }
+  };
+  canvas.onmouseleave = function () { tip.style.display = 'none'; draw(null); };
+}
+
+function drawEloHistory(canvas) {
+  var sid = canvas.dataset.sid;
+  var src = (DATA.ranking_elo || {}).players || [];
+  var rp = src.find(x => x.steamid === sid);
+  if (!rp) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  canvas.width = rect.width * dpr;
+  canvas.height = 180 * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  var W = rect.width, H = 180;
+  var pad = { l: 44, r: 12, t: 10, b: 22 };
+
+  var hist = rp.history.slice().sort((a, b) => a.e - b.e);
+  if (!hist.length) return;
+  var firstE = hist[0].e, lastE = hist[hist.length - 1].e;
+  if (firstE === lastE) { firstE -= 0.5; lastE += 0.5; }
+
+  var ratings = hist.map(h => h.r);
+  var minSeen = Math.min.apply(null, ratings.concat([1500]));
+  var maxSeen = Math.max.apply(null, ratings.concat([1500]));
+  var yMin = Math.min(1450, Math.floor((minSeen - 20) / 10) * 10);
+  var yMax = Math.max(1550, Math.ceil((maxSeen + 20) / 10) * 10);
+
+  function xf(e) { return pad.l + (e - firstE) / Math.max(1e-6, lastE - firstE) * (W - pad.l - pad.r); }
+  function yf(v) { return pad.t + (1 - (v - yMin) / Math.max(1, yMax - yMin)) * (H - pad.t - pad.b); }
+
+  var pts = hist.map(h => ({
+    event: h.e, place: h.p || null, rating: h.r,
+    w: h.w || 0, l: h.l || 0, d: h.d || 0,
+  }));
+
+  function draw(highlight) {
+    ctx.clearRect(0, 0, W, H);
+
+    // Y grid + labels
+    ctx.strokeStyle = cssVar('--border');
+    ctx.lineWidth = 1;
+    ctx.font = "9px 'JetBrains Mono', monospace";
+    ctx.textAlign = 'right';
+    var ySteps = 4;
+    for (var i = 0; i <= ySteps; i++) {
+      var v = Math.round(yMin + (yMax - yMin) * i / ySteps);
+      var y = yf(v);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y);
+      ctx.stroke();
+      ctx.fillStyle = cssVar('--text-muted');
+      ctx.fillText(v, pad.l - 5, y + 3);
+    }
+
+    // X labels: only show at the points we have (plus first/last bounds if integer)
+    ctx.fillStyle = cssVar('--text-muted');
+    ctx.textAlign = 'center';
+    var xLabels = pts.map(p => p.event);
+    xLabels.forEach(e => ctx.fillText(e, xf(e), H - 6));
+
+    // Reference line at 1500 (starting rating)
+    if (yMin <= 1500 && yMax >= 1500) {
+      ctx.save();
+      ctx.strokeStyle = cssVar('--text-muted');
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, yf(1500));
+      ctx.lineTo(W - pad.r, yf(1500));
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = cssVar('--text-dark');
+      ctx.textAlign = 'left';
+      ctx.fillText('start 1500', pad.l + 3, yf(1500) - 3);
+    }
+
+    var accent = cssVar('--accent') || '#f59e0b';
+
+    // Diagonal connect-the-dots through attended events
+    function trace() {
+      ctx.beginPath();
+      pts.forEach((pt, i) => {
+        var x = xf(pt.event), y = yf(pt.rating);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+    }
+    // Glow
+    ctx.save();
+    ctx.globalAlpha = 0.10; ctx.lineWidth = 6; ctx.strokeStyle = accent; ctx.lineJoin = 'round';
+    trace();
+    ctx.stroke();
+    ctx.restore();
+    // Main line
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    trace();
+    ctx.stroke();
+
+    // Markers
+    pts.forEach(pt => {
+      var x = xf(pt.event), y = yf(pt.rating);
+      var hl = highlight && highlight.event === pt.event;
+      if (pt.place === 1) {
+        var rr = hl ? 8 : 5.5;
+        ctx.beginPath();
+        for (var k = 0; k < 10; k++) {
+          var ang = -Math.PI / 2 + k * Math.PI / 5;
+          var rad = k % 2 === 0 ? rr : rr * 0.45;
+          ctx[k === 0 ? 'moveTo' : 'lineTo'](x + Math.cos(ang) * rad, y + Math.sin(ang) * rad);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ffd700'; ctx.fill();
+        ctx.strokeStyle = '#b8960c'; ctx.lineWidth = hl ? 1.5 : 1; ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, hl ? 5 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = accent;
+        ctx.fill();
+        if (hl) {
+          ctx.strokeStyle = cssVar('--text');
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+    });
+  }
+
+  draw(null);
+
+  var tip = canvas.parentElement.querySelector('.phist-tip');
+  canvas.onmousemove = function (e) {
+    var br = canvas.getBoundingClientRect();
+    var mx = e.clientX - br.left;
+    var closest = null, minDist = Infinity;
+    pts.forEach(pt => {
+      var dd = Math.abs(xf(pt.event) - mx);
+      if (dd < minDist) { minDist = dd; closest = pt; }
+    });
+    if (closest && minDist < 28) {
+      tip.style.display = 'block';
+      tip.innerHTML =
+        `<div class="t-head">Event #${closest.event}</div>` +
+        (closest.place ? `<div class="t-line">${ordinal(closest.place)}</div>` : '') +
+        `<div class="t-line">Rating <span style="color:var(--accent)">${closest.rating.toFixed(1)}</span></div>` +
+        `<div class="t-line" style="color:var(--text-muted);font-size:10px">${closest.w}-${closest.l}-${closest.d}</div>`;
+      var tx = xf(closest.event) + 12;
+      var ty = yf(closest.rating) - 30;
+      var tw = tip.offsetWidth;
+      if (tx + tw > W) tx = xf(closest.event) - tw - 12;
+      if (ty < 0) ty = 4;
+      tip.style.left = tx + 'px';
+      tip.style.top = ty + 'px';
+      draw(closest);
+    } else {
+      tip.style.display = 'none';
+      draw(null);
+    }
+  };
+  canvas.onmouseleave = function () { tip.style.display = 'none'; draw(null); };
+}
+
+function cssVar(n) {
+  return getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+}
+
+// ── Events view (sortable list, click row to expand inline) ──────────
+const EVENTS_COLS = '40px 80px 90px 1fr 60px 90px';
+function renderEvents(ctrl) {
+  ctrl.innerHTML = '';
+  var rows = DATA.cups.slice();
+  rows.sort(eventSorter(eventSort));
+  var headHtml = `
+    <div class="tg-head" id="evHead" style="grid-template-columns:${EVENTS_COLS};">
+      <div data-sort="rank">#</div>
+      <div data-sort="event">Event${earrow('event')}</div>
+      <div data-sort="date">Date${earrow('date')}</div>
+      <div data-sort="winner">Winner${earrow('winner')}</div>
+      <div data-sort="lobby_size" style="text-align:right">Players${earrow('lobby_size')}</div>
+      <div data-sort="format" style="text-align:right">Format${earrow('format')}</div>
+    </div>`;
+  var bodyHtml = rows.map((c, i) => renderEventRow(c, i + 1)).join('');
+  return headHtml + `<div id="evBody">${bodyHtml}</div>`;
+}
+function earrow(c) { return eventSort.col === c ? `<span class="sort-arrow">${eventSort.dir<0?'▼':'▲'}</span>` : ''; }
+function eventSorter(s) {
+  return (a, b) => {
+    let av, vb, bv;
+    if (s.col === 'date' || s.col === 'event') { av = a[s.col === 'date' ? 'date' : 'event']; bv = b[s.col === 'date' ? 'date' : 'event'];
+      return s.dir * (av < bv ? -1 : av > bv ? 1 : 0); }
+    if (s.col === 'winner') { av = (a.winner_name||'').toLowerCase(); bv = (b.winner_name||'').toLowerCase();
+      return s.dir * (av < bv ? -1 : av > bv ? 1 : 0); }
+    if (s.col === 'lobby_size') { av = a.lobby_size||0; bv = b.lobby_size||0; return s.dir * (av - bv); }
+    if (s.col === 'format') {
+      var order = {'standard':0, 'roulette':1, 'non_standard':2, undefined:3};
+      av = a.stub ? 4 : order[a.format]; bv = b.stub ? 4 : order[b.format];
+      return s.dir * (av - bv);
+    }
+    return 0;
+  };
+}
+function renderEventRow(c, rowIdx) {
+  var winnerColor = c.stub ? 'var(--text-muted)' : 'var(--text)';
+  var fmt = c.stub
+    ? `<span class="badge stub">stub</span>`
+    : (c.format !== 'standard' ? `<span class="badge ${c.format}">${c.format}</span>` : `<span style="color:var(--text-dark);font-family:var(--mono);font-size:10px">—</span>`);
+  var lobby = c.stub ? '—' : c.lobby_size;
+  var rowClass = c.stub ? 'row stub' : 'row';
+  return `
+    <div class="${rowClass}" data-event="${c.event}" style="grid-template-columns:${EVENTS_COLS};">
+      <div class="rank">${rowIdx}</div>
+      <div style="font-family:var(--mono);font-size:12px;font-weight:700">#${c.event}</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${c.date}</div>
+      <div style="font-weight:600;color:${winnerColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.winner_name || '?')}</div>
+      <div style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--text-muted)">${lobby}</div>
+      <div style="text-align:right">${fmt}</div>
+    </div>
+    <div class="detail" id="ev-${c.event}" style="display:none">${c.stub ? renderStubCup(c) : renderCupDetail(c)}</div>
+  `;
+}
+function renderStubCup(cup) {
+  return `
+    <div class="cup-meta">
+      <strong>Event #${cup.event}</strong> · ${cup.date} · <span class="badge stub">no log</span><br>
+      Mapper: ${escapeHtml(cup.mapper_name || '?')} · Winner: ${escapeHtml(cup.winner_name || '?')}<br>
+      <span style="color:var(--text-muted)">Hand-typed metadata only — agix has not provided the JSON for this event.</span>
+    </div>
+  `;
+}
+function renderCupDetail(cup) {
+  var fmtBadge = cup.format !== 'standard' ? `<span class="badge ${cup.format}">${cup.format}</span>` : '';
+  // Dedupe maps for display, preserve round order
+  var seen = new Set();
+  var uniq = cup.maps.filter(m => { var k = m.uid || m.name; if (seen.has(k)) return false; seen.add(k); return true; });
+  // Group results by placement (ties)
+  var buckets = {};
+  cup.results.forEach(r => { (buckets[r.placement] = buckets[r.placement] || []).push(r); });
+  var placements = Object.keys(buckets).map(Number).sort((a,b)=>a-b);
+  return `
+    <div class="cup-meta">
+      <strong>Event #${cup.event}</strong> · ${cup.date} · ${fmtBadge}
+      ${cup.lobby_size} players · ${cup.rounds_total} rounds · ${cup.lives} lives<br>
+      Winner: <strong>${escapeHtml(cup.winner_name || '?')}</strong>
+      <div class="maps-list">
+        ${uniq.map(m => `<span class="map-pill">${escapeHtml(m.name)} <span class="auth">— ${escapeHtml(m.author)}</span></span>`).join('')}
+      </div>
+    </div>
+    <div class="tg-head" style="grid-template-columns:50px 1fr 70px 50px 50px 60px;">
+      <div>Place</div><div>Player</div><div style="text-align:right">Tags</div>
+      <div style="text-align:right">Elim</div><div style="text-align:right">Lives</div>
+      <div style="text-align:right">Out R</div>
+    </div>
+    ${placements.map(pl => buckets[pl].map((r,i) => `
+      <div class="row" style="grid-template-columns:50px 1fr 70px 50px 50px 60px;cursor:default">
+        <div class="rank">${i === 0 ? ordinal(pl) : ''}</div>
+        <div class="player">
+          <span class="pname ${pl===1?'gold-name':pl===2?'silver-name':pl===3?'bronze-name':''}">${escapeHtml(r.name)}</span>
+        </div>
+        <div style="text-align:right;font-family:var(--mono)">${r.tags_made}</div>
+        <div style="text-align:right;font-family:var(--mono)">${r.eliminations_made}</div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${cup.lives - r.lives_lost}/${cup.lives}</div>
+        <div style="text-align:right;font-family:var(--mono);color:var(--text-muted)">${r.elim_round === null ? '—' : 'R'+r.elim_round}</div>
+      </div>
+    `).join('')).join('')}
+  `;
+}
+
+// ── Tag Matrix view ───────────────────────────────────────────────────
+function renderMatrix(ctrl) {
+  ctrl.innerHTML = `
+    <div class="mx-search-wrap" style="position:relative;flex:0 1 280px;">
+      <input type="text" class="search-input" id="mxSearch" placeholder="Type your name..." style="width:100%;" autocomplete="off">
+      <div id="mxSugg" class="mx-suggestions"></div>
+    </div>`;
+  setTimeout(() => {
+    var inp = document.getElementById('mxSearch');
+    if (!inp) return;
+    inp.addEventListener('input', e => updateSuggestions(e.target.value));
+    inp.addEventListener('focus', () => updateSuggestions(inp.value));
+    inp.addEventListener('blur', () => setTimeout(() => {
+      var s = document.getElementById('mxSugg'); if (s) s.style.display = 'none';
+    }, 150));
+  }, 0);
+  var p = DATA.players.find(x => x.steamid === matrixSelected);
+  if (!p) {
+    p = DATA.players.slice().sort((a,b)=>(b.cups_won-a.cups_won)||(b.cups_attended-a.cups_attended))[0];
+  }
+  if (!p) return '<div style="color:var(--text-muted);font-family:var(--mono);padding:30px;text-align:center">No player data.</div>';
+  var pod = p.podiums;
+  return `
+    <div class="cup-meta">
+      <strong style="font-size:18px">${escapeHtml(p.name)}</strong>
+      ${p.aliases.length ? `<span style="color:var(--text-muted);font-size:11px"> · also seen as ${p.aliases.map(escapeHtml).join(', ')}</span>` : ''}
+    </div>
+    <div class="tm-summary">
+      <div class="stat"><span class="label">Cups</span><span class="value">${p.cups_attended}</span></div>
+      <div class="stat"><span class="label">Wins</span><span class="value" style="color:var(--gold)">${p.cups_won}</span></div>
+      <div class="stat"><span class="label">G/S/B</span><span class="value">${pod.gold}/${pod.silver}/${pod.bronze}</span></div>
+      <div class="stat"><span class="label">Tags made</span><span class="value">${p.tags_made_total}</span></div>
+      <div class="stat"><span class="label">Tagged by</span><span class="value">${p.tagged_by_total}</span></div>
+      <div class="stat"><span class="label">Eliminations</span><span class="value">${p.eliminations_made_total}</span></div>
+      <div class="stat"><span class="label">Times eliminated</span><span class="value">${p.times_eliminated_total}</span></div>
+    </div>
+    <div class="tm-grid">
+      ${matrixPanel('Tags they make (top victims)', p.tag_matrix.tags_on)}
+      ${matrixPanel('Tagged by (top pursuers)', p.tag_matrix.tagged_by)}
+      ${matrixPanel('Eliminations made (kills)', p.tag_matrix.elims_on)}
+      ${matrixPanel('Eliminated by (their killers)', p.tag_matrix.elimd_by)}
+    </div>
+  `;
+}
+function updateSuggestions(q) {
+  var box = document.getElementById('mxSugg');
+  if (!box) return;
+  var query = (q || '').toLowerCase().trim();
+  var pool = DATA.players.slice();
+  var matches;
+  if (!query) {
+    matches = pool.sort((a,b)=>(b.cups_won-a.cups_won)||(b.cups_attended-a.cups_attended)).slice(0, 10);
+  } else {
+    matches = pool.filter(p => {
+      var hay = [p.name].concat(p.aliases || []).join(' ').toLowerCase();
+      return hay.includes(query);
+    });
+    // Rank: name-prefix > name-contains > alias-contains
+    matches.sort((a, b) => {
+      var an = a.name.toLowerCase(), bn = b.name.toLowerCase();
+      var ap = an.startsWith(query) ? 0 : an.includes(query) ? 1 : 2;
+      var bp = bn.startsWith(query) ? 0 : bn.includes(query) ? 1 : 2;
+      if (ap !== bp) return ap - bp;
+      return (b.cups_attended - a.cups_attended) || a.name.localeCompare(b.name);
+    });
+    matches = matches.slice(0, 12);
+  }
+  if (!matches.length) {
+    box.innerHTML = `<div class="mx-sugg-empty">No matches.</div>`;
+    box.style.display = 'block';
+    return;
+  }
+  box.innerHTML = matches.map(p => `
+    <div class="mx-sugg-row" data-sid="${p.steamid}">
+      <span class="mx-sugg-name">${escapeHtml(p.name)}</span>
+      <span class="mx-sugg-meta">${p.cups_attended}c · ${p.cups_won}w</span>
+    </div>
+  `).join('');
+  box.style.display = 'block';
+  // Click handler — use mousedown so it fires before input blur
+  box.querySelectorAll('.mx-sugg-row').forEach(row => {
+    row.addEventListener('mousedown', e => {
+      e.preventDefault();
+      matrixSelected = row.dataset.sid;
+      box.style.display = 'none';
+      render();
+    });
+  });
+}
+
+function matrixPanel(title, sparseMap) {
+  var entries = Object.entries(sparseMap).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+  if (!entries.length) return `<div class="tm-panel"><h3>${title}</h3>
+    <div style="color:var(--text-muted);font-size:11px;padding:8px 0">No data.</div></div>`;
+  return `<div class="tm-panel"><h3>${title}</h3>
+    ${entries.map(([sid, cnt]) => `
+      <div class="tm-row">
+        <div class="tm-name">${escapeHtml(SID2NAME[sid] || ('Unknown('+sid+')'))}</div>
+        <div class="tm-cnt">${cnt}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
+// ── Handlers ──────────────────────────────────────────────────────────
+function attachHandlers() {
+  // Ranking-tab sortable header
+  document.querySelectorAll('#content > .tg-head:not(#evHead) [data-sort]').forEach(d => {
+    d.addEventListener('click', () => {
+      var c = d.dataset.sort;
+      if (rankingSort.col === c) rankingSort.dir = -rankingSort.dir;
+      else { rankingSort.col = c; rankingSort.dir = (c === 'name') ? 1 : -1; }
+      render();
+    });
+  });
+  // Ranking row → expand + draw chart
+  document.querySelectorAll('#rankBody .row').forEach(row => {
+    row.addEventListener('click', () => {
+      var sid = row.dataset.sid;
+      var detail = document.getElementById('rd-' + sid);
+      if (!detail) return;
+      var open = detail.style.display !== 'none';
+      document.querySelectorAll('#rankBody .detail').forEach(d => d.style.display = 'none');
+      document.querySelectorAll('#rankBody .row.selected').forEach(r => r.classList.remove('selected'));
+      if (!open) {
+        detail.style.display = 'block';
+        row.classList.add('selected');
+        var canvas = detail.querySelector('.phist-canvas');
+        if (canvas) drawPlayerHistory(canvas);
+      }
+    });
+  });
+  // "Tag matrix →" link inside the expanded ranking detail
+  document.querySelectorAll('#rankBody .rd-link').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      var sid = btn.dataset.jumpMatrix;
+      view = 'matrix';
+      matrixSelected = sid;
+      setActive();
+      render();
+    });
+  });
+  // Events-tab sortable header
+  document.querySelectorAll('#evHead [data-sort]').forEach(d => {
+    d.addEventListener('click', () => {
+      var c = d.dataset.sort;
+      if (c === 'rank') return;
+      if (eventSort.col === c) eventSort.dir = -eventSort.dir;
+      else { eventSort.col = c; eventSort.dir = (c === 'event' || c === 'date' || c === 'lobby_size') ? -1 : 1; }
+      render();
+    });
+  });
+  // Events row → expand inline
+  document.querySelectorAll('#evBody > .row').forEach(row => {
+    row.addEventListener('click', () => {
+      var ev = row.dataset.event;
+      var detail = document.getElementById('ev-' + ev);
+      if (!detail) return;
+      var open = detail.style.display !== 'none';
+      document.querySelectorAll('#evBody .detail').forEach(d => d.style.display = 'none');
+      document.querySelectorAll('#evBody .row.selected').forEach(r => r.classList.remove('selected'));
+      if (!open) {
+        detail.style.display = 'block';
+        row.classList.add('selected');
+        eventExpanded = parseInt(ev);
+      } else {
+        eventExpanded = null;
+      }
+    });
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function ordinal(n) {
+  if (n === 1) return '1st';
+  if (n === 2) return '2nd';
+  if (n === 3) return '3rd';
+  return n + 'th';
+}
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+</script>
+<script data-goatcounter="https://aizpun.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
