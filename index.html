@@ -752,7 +752,9 @@ function drawPlacementHistory(canvas) {
       var d = Math.abs(xf(pt.event) - mx);
       if (d < minDist) { minDist = d; closest = pt; }
     });
-    if (closest && minDist < 28) {
+    var hit = closest && minDist < 30;
+    canvas.style.cursor = hit ? 'pointer' : 'crosshair';
+    if (hit) {
       tip.style.display = 'block';
       tip.innerHTML =
         `<div class="t-head">Event #${closest.event}</div>` +
@@ -773,7 +775,17 @@ function drawPlacementHistory(canvas) {
       draw(null);
     }
   };
-  canvas.onmouseleave = function () { tip.style.display = 'none'; draw(null); };
+  canvas.onmouseleave = function () { tip.style.display = 'none'; canvas.style.cursor = 'crosshair'; draw(null); };
+  canvas.onclick = function (e) {
+    var br = canvas.getBoundingClientRect();
+    var mx = e.clientX - br.left;
+    var closest = null, minDist = Infinity;
+    pts.forEach(pt => {
+      var d = Math.abs(xf(pt.event) - mx);
+      if (d < minDist) { minDist = d; closest = pt; }
+    });
+    if (closest && minDist < 30) jumpToEvent(closest.event);
+  };
 }
 
 function drawEloHistory(canvas) {
@@ -915,7 +927,9 @@ function drawEloHistory(canvas) {
       var dd = Math.abs(xf(pt.event) - mx);
       if (dd < minDist) { minDist = dd; closest = pt; }
     });
-    if (closest && minDist < 28) {
+    var hit = closest && minDist < 30;
+    canvas.style.cursor = hit ? 'pointer' : 'crosshair';
+    if (hit) {
       tip.style.display = 'block';
       tip.innerHTML =
         `<div class="t-head">Event #${closest.event}</div>` +
@@ -935,7 +949,17 @@ function drawEloHistory(canvas) {
       draw(null);
     }
   };
-  canvas.onmouseleave = function () { tip.style.display = 'none'; draw(null); };
+  canvas.onmouseleave = function () { tip.style.display = 'none'; canvas.style.cursor = 'crosshair'; draw(null); };
+  canvas.onclick = function (e) {
+    var br = canvas.getBoundingClientRect();
+    var mx = e.clientX - br.left;
+    var closest = null, minDist = Infinity;
+    pts.forEach(pt => {
+      var dd = Math.abs(xf(pt.event) - mx);
+      if (dd < minDist) { minDist = dd; closest = pt; }
+    });
+    if (closest && minDist < 30) jumpToEvent(closest.event);
+  };
 }
 
 function cssVar(n) {
@@ -1240,6 +1264,20 @@ function attachHandlers() {
         eventExpanded = null;
       }
     });
+  });
+}
+
+// ── Navigation ────────────────────────────────────────────────────────
+function jumpToEvent(eventNum) {
+  view = 'events';
+  setActive();
+  render();
+  requestAnimationFrame(() => {
+    var row = document.querySelector('#evBody .row[data-event="' + eventNum + '"]');
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.click();
+    }
   });
 }
 
