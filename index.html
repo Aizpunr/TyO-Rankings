@@ -262,6 +262,27 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 @media(max-width:700px) {
   .tm-grid { grid-template-columns: 1fr; }
   .container { padding: 0 4px; }
+
+  body { padding: 12px 4px; }
+  .header h1 { font-size: 22px; }
+  .header .sub { font-size: 11px; line-height: 1.5; }
+
+  /* Hide deprioritized cells on mobile */
+  .m-hide { display: none !important; }
+
+  /* Season 2 + All Time: #/Player/Score/Pod (Pts on Season 2, Rating on All Time) */
+  #content > .tg-head:not(#evHead),
+  #rankBody > .row { grid-template-columns: 28px minmax(0, 1fr) auto auto !important; column-gap: 8px; }
+
+  /* Events list: Event/Winner/Players */
+  #evHead, #evBody > .row { grid-template-columns: 70px 1fr 50px !important; }
+
+  /* Controls stack so search gets full width below tabs */
+  #ctrlExtras { margin-left: 0 !important; width: 100%; }
+  .search-input { width: 100% !important; flex: 1; min-width: 0; }
+
+  /* Tighter medal pills so 3 fit in the 110px Pod cell */
+  .medal { min-width: 18px; padding: 1px 4px; font-size: 11px; margin-left: 1px; }
 }
 </style>
 <script>
@@ -395,10 +416,10 @@ function renderRanking(ctrl) {
         <div data-sort="rank">#${arrow('rank')}</div>
         <div data-sort="name">Player${arrow('name')}</div>
         <div data-sort="points" style="text-align:right">Pts${arrow('points')}</div>
-        <div data-sort="cups_in_window" style="text-align:right">Cups${arrow('cups_in_window')}</div>
+        <div data-sort="cups_in_window" class="m-hide" style="text-align:right">Cups${arrow('cups_in_window')}</div>
         <div data-sort="podiums" style="text-align:right" title="gold/silver/bronze">Pod${arrow('podiums')}</div>
-        <div data-sort="tags" style="text-align:right">Tags${arrow('tags')}</div>
-        <div data-sort="elims" style="text-align:right">Elim${arrow('elims')}</div>
+        <div data-sort="tags" class="m-hide" style="text-align:right">Tags${arrow('tags')}</div>
+        <div data-sort="elims" class="m-hide" style="text-align:right">Elim${arrow('elims')}</div>
       </div>`;
   } else {
     var src = (DATA.ranking_elo || {}).players || [];
@@ -413,10 +434,10 @@ function renderRanking(ctrl) {
         <div data-sort="name">Player${arrow('name')}</div>
         <div data-sort="rating" style="text-align:right">Rating${arrow('rating')}</div>
         <div data-sort="podiums" style="text-align:right" title="gold/silver/bronze">Podium${arrow('podiums')}</div>
-        <div data-sort="cups" style="text-align:right" title="Logged cups only.&#10;Events 1–22 and 26 have no per-round data so they're not counted here.&#10;(Cup wins from those events still show in Podium.)">Cups${arrow('cups')}</div>
-        <div data-sort="winpct" style="text-align:right" title="Wins / total pair matchups, logged cups only.&#10;Events 1–22 and 26 have no per-round data so they don't contribute pairs.">Win%${arrow('winpct')}</div>
-        <div data-sort="wld" style="text-align:right" title="W = times you tagged your target&#10;L = times your pursuer tagged you&#10;D = double DNF (no one was strictly faster)">W-L-D${arrow('wld')}</div>
-        <div data-sort="peak" style="text-align:right">Peak${arrow('peak')}</div>
+        <div data-sort="cups" class="m-hide" style="text-align:right" title="Logged cups only.&#10;Events 1–22 and 26 have no per-round data so they're not counted here.&#10;(Cup wins from those events still show in Podium.)">Cups${arrow('cups')}</div>
+        <div data-sort="winpct" class="m-hide" style="text-align:right" title="Wins / total pair matchups, logged cups only.&#10;Events 1–22 and 26 have no per-round data so they don't contribute pairs.">Win%${arrow('winpct')}</div>
+        <div data-sort="wld" class="m-hide" style="text-align:right" title="W = times you tagged your target&#10;L = times your pursuer tagged you&#10;D = double DNF (no one was strictly faster)">W-L-D${arrow('wld')}</div>
+        <div data-sort="peak" class="m-hide" style="text-align:right">Peak${arrow('peak')}</div>
       </div>`;
   }
   var q = '';
@@ -510,12 +531,12 @@ function renderRankRows(rows, q) {
           <div class="rank">${i + 1}</div>
           <div class="player"><span class="pname ${nameClass}">${escapeHtml(r.name)}</span></div>
           <div style="text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700">${r.points}</div>
-          <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups_in_window}</div>
+          <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups_in_window}</div>
           <div style="text-align:right;font-family:var(--mono)">
             <span style="color:var(--gold)">${pod.gold}</span>/<span style="color:var(--silver)">${pod.silver}</span>/<span style="color:var(--bronze)">${pod.bronze}</span>
           </div>
-          <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${tagSum}</div>
-          <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${elimSum}</div>
+          <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${tagSum}</div>
+          <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${elimSum}</div>
         </div>
         <div class="detail" id="rd-${r.steamid}" style="display:none">
           ${renderRankDetail(r)}
@@ -532,12 +553,12 @@ function renderRankRows(rows, q) {
         <div class="player"><span class="pname ${nameClass}">${escapeHtml(r.name)}</span></div>
         <div style="text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700">${r.rating.toFixed(1)}</div>
         <div class="pod-cell" style="text-align:right">${podiumCell(r.gold, r.silver, r.bronze)}</div>
-        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups}</div>
-        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${(winPct(r) * 100).toFixed(1)}%</div>
-        <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">
+        <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups}</div>
+        <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${(winPct(r) * 100).toFixed(1)}%</div>
+        <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">
           <span style="color:var(--green)">${r.wins}</span>-<span style="color:var(--red)">${r.losses}</span>-<span style="color:var(--text-muted)">${r.draws}</span>
         </div>
-        <div style="text-align:right;font-family:var(--mono);color:var(--text-muted);font-size:11px">${r.peak.toFixed(1)}</div>
+        <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-muted);font-size:11px">${r.peak.toFixed(1)}</div>
       </div>
       <div class="detail" id="rd-${r.steamid}" style="display:none">
         ${renderRankDetailElo(r)}
@@ -974,12 +995,12 @@ function renderEvents(ctrl) {
   rows.sort(eventSorter(eventSort));
   var headHtml = `
     <div class="tg-head" id="evHead" style="grid-template-columns:${EVENTS_COLS};">
-      <div data-sort="rank">#</div>
+      <div data-sort="rank" class="m-hide">#</div>
       <div data-sort="event">Event${earrow('event')}</div>
-      <div data-sort="date">Date${earrow('date')}</div>
+      <div data-sort="date" class="m-hide">Date${earrow('date')}</div>
       <div data-sort="winner">Winner${earrow('winner')}</div>
       <div data-sort="lobby_size" style="text-align:right">Players${earrow('lobby_size')}</div>
-      <div data-sort="format" style="text-align:right">Format${earrow('format')}</div>
+      <div data-sort="format" class="m-hide" style="text-align:right">Format${earrow('format')}</div>
     </div>`;
   var bodyHtml = rows.map((c, i) => renderEventRow(c, i + 1)).join('');
   return headHtml + `<div id="evBody">${bodyHtml}</div>`;
@@ -1010,12 +1031,12 @@ function renderEventRow(c, rowIdx) {
   var rowClass = c.stub ? 'row stub' : 'row';
   return `
     <div class="${rowClass}" data-event="${c.event}" style="grid-template-columns:${EVENTS_COLS};">
-      <div class="rank">${rowIdx}</div>
+      <div class="rank m-hide">${rowIdx}</div>
       <div style="font-family:var(--mono);font-size:12px;font-weight:700">#${c.event}</div>
-      <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${c.date}</div>
+      <div class="m-hide" style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${c.date}</div>
       <div style="font-weight:600;color:${winnerColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.winner_name || '?')}</div>
       <div style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--text-muted)">${lobby}</div>
-      <div style="text-align:right">${fmt}</div>
+      <div class="m-hide" style="text-align:right">${fmt}</div>
     </div>
     <div class="detail" id="ev-${c.event}" style="display:none">${c.stub ? renderStubCup(c) : renderCupDetail(c)}</div>
   `;
