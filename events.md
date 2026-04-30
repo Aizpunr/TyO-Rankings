@@ -24,13 +24,13 @@ comes from agix's Top->Out JSON files (see `reference_agix_topout_mod.md`).
 |           17 | 2025-07-12 | DeeDeeNaNaNa        | justMaki        |
 |           18 | 2025-08-03 | PoopSheriff         | Kernkob         |
 |           19 | 2025-08-10 | //////void          | Noxitu          |
-|           20 | 2025-09-06 | Mμ                  | Quickracer10    |
-|           21 | 2025-09-13 | HateHater           | RoundNZT        |
-|           22 | 2025-10-27 | CyberpunkNinja      | Tommygaming5132 |
+|           20 | 2025-09-06 | Blu                 | GuAlexItar      |
+|           21 | 2025-09-13 | Mμ                  | Quickracer10    |
+|           22 | 2025-09-27 | HateHater           | RoundNZT        |
 |           26 | 2025-11-01 | NotThatGuy          | Kernkob         |
 
-## Open questions
+## Notes
 
-- **Events 23, 24, 25 missing from list.** Event 22 = 2025-10-27, event 26 = 2025-11-01 — only 5 days between, which doesn't fit weekly-ish cadence for 3 intervening events. Need to check whether the date on #26 is a typo, whether 23–25 happened in that window, or whether they're just absent from this snapshot.
-- Coverage stops at event 26 (2025-11-01). Today is 2026-04-27 — many more events have happened. Need full list from agix.
-- No JSON file yet for any of these events. Sample `topoutresults.json` we reviewed was Kerki #16, not TYO.
+- **Events 1–22 + 26 have no JSON log** — winners/mappers are hand-typed from agix.
+- Updated 2026-04-29: agix corrected events 20–22 (mappers, winners, and event 22 date were wrong in the prior snapshot — event 22 was 2025-09-27, not 2025-10-27).
+- Logs cover events 23–25, 27–41.

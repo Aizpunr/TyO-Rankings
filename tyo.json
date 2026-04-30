@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated": "2026-04-27T15:46:25Z",
+    "generated": "2026-04-30T16:52:09Z",
     "total_cups": 18,
     "stub_cups": 2,
     "total_players": 174,
@@ -11,10 +11,10 @@
   "cups": [
     {
       "event": 22,
-      "date": "2025-10-27",
+      "date": "2025-09-27",
       "stub": true,
-      "mapper_name": "CyberpunkNinja",
-      "winner_name": "Tommygaming5132"
+      "mapper_name": "HateHater",
+      "winner_name": "RoundNZT"
     },
     {
       "event": 23,
@@ -349,7 +349,7 @@
         },
         {
           "steamid": "76561198976514611",
-          "name": "segelnhoch3",
+          "name": "sailingman",
           "placement": 19,
           "elim_round": 2,
           "rounds_played": 3,
@@ -6490,18 +6490,6 @@
           "eliminated_by_steamid": "76561199126724675"
         },
         {
-          "steamid": "76561199101028752",
-          "name": "[PINK] captancraft2",
-          "placement": 22,
-          "elim_round": 2,
-          "rounds_played": 3,
-          "lives_lost": 3,
-          "tags_made": 0,
-          "tagged_by": 3,
-          "eliminations_made": 0,
-          "eliminated_by_steamid": "76561199129302746"
-        },
-        {
           "steamid": "76561198070406017",
           "name": "[TTR]DragonShadow84290",
           "placement": 22,
@@ -6512,6 +6500,18 @@
           "tagged_by": 3,
           "eliminations_made": 0,
           "eliminated_by_steamid": "76561197963702040"
+        },
+        {
+          "steamid": "76561199101028752",
+          "name": "captancraft2",
+          "placement": 22,
+          "elim_round": 2,
+          "rounds_played": 3,
+          "lives_lost": 3,
+          "tags_made": 0,
+          "tagged_by": 3,
+          "eliminations_made": 0,
+          "eliminated_by_steamid": "76561199129302746"
         },
         {
           "steamid": "76561198039621545",
@@ -7034,7 +7034,7 @@
       },
       "historic_wins": [
         9,
-        20
+        21
       ]
     },
     {
@@ -7122,9 +7122,9 @@
         "[CTR]GuAlexItar"
       ],
       "cups_attended": 17,
-      "cups_won": 1,
+      "cups_won": 2,
       "podiums": {
-        "gold": 1,
+        "gold": 2,
         "silver": 1,
         "bronze": 1
       },
@@ -7406,7 +7406,10 @@
           "76561199733601754": 1,
           "76561199448462477": 1
         }
-      }
+      },
+      "historic_wins": [
+        20
+      ]
     },
     {
       "steamid": "76561199187327002",
@@ -7416,9 +7419,9 @@
         "[OOPS]Tommygaming"
       ],
       "cups_attended": 15,
-      "cups_won": 2,
+      "cups_won": 1,
       "podiums": {
-        "gold": 2,
+        "gold": 1,
         "silver": 1,
         "bronze": 3
       },
@@ -7664,10 +7667,7 @@
           "76561199448462477": 3,
           "76561199590715014": 1
         }
-      },
-      "historic_wins": [
-        22
-      ]
+      }
     },
     {
       "steamid": "76561198896246339",
@@ -7819,7 +7819,7 @@
         5,
         7,
         14,
-        21
+        22
       ]
     },
     {
@@ -11718,64 +11718,6 @@
       }
     },
     {
-      "steamid": "76561199101028752",
-      "name": "[PINK] captancraft2",
-      "aliases": [
-        "captancraft2"
-      ],
-      "cups_attended": 2,
-      "cups_won": 0,
-      "podiums": {
-        "gold": 0,
-        "silver": 0,
-        "bronze": 0
-      },
-      "rounds_played_total": 6,
-      "lives_lost_total": 6,
-      "tags_made_total": 0,
-      "tagged_by_total": 6,
-      "eliminations_made_total": 1,
-      "times_eliminated_total": 2,
-      "history": [
-        {
-          "event": 39,
-          "placement": 19,
-          "elim_round": 2,
-          "tags": 0,
-          "tagged": 3,
-          "elims": 1,
-          "points": 6,
-          "counted": true
-        },
-        {
-          "event": 41,
-          "placement": 22,
-          "elim_round": 2,
-          "tags": 0,
-          "tagged": 3,
-          "elims": 0,
-          "points": 0,
-          "counted": true
-        }
-      ],
-      "tag_matrix": {
-        "tags_on": {},
-        "tagged_by": {
-          "76561199278221929": 1,
-          "76561198315900248": 1,
-          "76561198974231691": 1,
-          "76561199380118922": 1
-        },
-        "elims_on": {
-          "76561199630902908": 1
-        },
-        "elimd_by": {
-          "76561198122894680": 1,
-          "76561199129302746": 1
-        }
-      }
-    },
-    {
       "steamid": "76561198044617474",
       "name": "[tcH] DestinyForNone",
       "aliases": [],
@@ -12002,6 +11944,64 @@
         "elimd_by": {
           "76561197998425411": 1,
           "76561198161379363": 1
+        }
+      }
+    },
+    {
+      "steamid": "76561199101028752",
+      "name": "captancraft2",
+      "aliases": [
+        "[PINK] captancraft2"
+      ],
+      "cups_attended": 2,
+      "cups_won": 0,
+      "podiums": {
+        "gold": 0,
+        "silver": 0,
+        "bronze": 0
+      },
+      "rounds_played_total": 6,
+      "lives_lost_total": 6,
+      "tags_made_total": 0,
+      "tagged_by_total": 6,
+      "eliminations_made_total": 1,
+      "times_eliminated_total": 2,
+      "history": [
+        {
+          "event": 39,
+          "placement": 19,
+          "elim_round": 2,
+          "tags": 0,
+          "tagged": 3,
+          "elims": 1,
+          "points": 6,
+          "counted": true
+        },
+        {
+          "event": 41,
+          "placement": 22,
+          "elim_round": 2,
+          "tags": 0,
+          "tagged": 3,
+          "elims": 0,
+          "points": 0,
+          "counted": true
+        }
+      ],
+      "tag_matrix": {
+        "tags_on": {},
+        "tagged_by": {
+          "76561199278221929": 1,
+          "76561198315900248": 1,
+          "76561198974231691": 1,
+          "76561199380118922": 1
+        },
+        "elims_on": {
+          "76561199630902908": 1
+        },
+        "elimd_by": {
+          "76561198122894680": 1,
+          "76561199129302746": 1
         }
       }
     },
@@ -16875,8 +16875,10 @@
     },
     {
       "steamid": "76561198976514611",
-      "name": "segelnhoch3",
-      "aliases": [],
+      "name": "sailingman",
+      "aliases": [
+        "segelnhoch3"
+      ],
       "cups_attended": 1,
       "cups_won": 0,
       "podiums": {
@@ -22927,44 +22929,6 @@
         "rank": 113
       },
       {
-        "steamid": "76561199101028752",
-        "name": "[PINK] captancraft2",
-        "points": 6,
-        "points_all": 6,
-        "cups_in_window": 2,
-        "wins": 0,
-        "podiums": {
-          "gold": 0,
-          "silver": 0,
-          "bronze": 0
-        },
-        "counted": 2,
-        "dropped": 0,
-        "history": [
-          {
-            "event": 39,
-            "placement": 19,
-            "elim_round": 2,
-            "tags": 0,
-            "tagged": 3,
-            "elims": 1,
-            "points": 6,
-            "counted": true
-          },
-          {
-            "event": 41,
-            "placement": 22,
-            "elim_round": 2,
-            "tags": 0,
-            "tagged": 3,
-            "elims": 0,
-            "points": 0,
-            "counted": true
-          }
-        ],
-        "rank": 114
-      },
-      {
         "steamid": "76561198070406017",
         "name": "[TTR]DragonShadow84290",
         "points": 6,
@@ -22986,6 +22950,44 @@
             "tags": 1,
             "tagged": 3,
             "elims": 0,
+            "points": 6,
+            "counted": true
+          },
+          {
+            "event": 41,
+            "placement": 22,
+            "elim_round": 2,
+            "tags": 0,
+            "tagged": 3,
+            "elims": 0,
+            "points": 0,
+            "counted": true
+          }
+        ],
+        "rank": 114
+      },
+      {
+        "steamid": "76561199101028752",
+        "name": "captancraft2",
+        "points": 6,
+        "points_all": 6,
+        "cups_in_window": 2,
+        "wins": 0,
+        "podiums": {
+          "gold": 0,
+          "silver": 0,
+          "bronze": 0
+        },
+        "counted": 2,
+        "dropped": 0,
+        "history": [
+          {
+            "event": 39,
+            "placement": 19,
+            "elim_round": 2,
+            "tags": 0,
+            "tagged": 3,
+            "elims": 1,
             "points": 6,
             "counted": true
           },
@@ -24235,7 +24237,7 @@
         "wins": 108,
         "losses": 78,
         "draws": 5,
-        "gold": 2,
+        "gold": 1,
         "silver": 1,
         "bronze": 3,
         "history": [
@@ -24599,7 +24601,7 @@
         "wins": 107,
         "losses": 79,
         "draws": 10,
-        "gold": 1,
+        "gold": 2,
         "silver": 1,
         "bronze": 1,
         "history": [
@@ -27114,7 +27116,7 @@
       },
       {
         "steamid": "76561199101028752",
-        "name": "[PINK] captancraft2",
+        "name": "captancraft2",
         "rating": 1455.1,
         "peak": 1500,
         "cups": 2,
