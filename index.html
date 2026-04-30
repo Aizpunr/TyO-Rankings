@@ -1068,13 +1068,14 @@ function renderCupDetail(cup) {
         ${uniq.map(m => `<span class="map-pill">${escapeHtml(m.name)} <span class="auth">— ${escapeHtml(m.author)}</span></span>`).join('')}
       </div>
     </div>
-    <div class="tg-head" style="grid-template-columns:50px 1fr 70px 50px 50px 60px;">
+    <div class="tg-head" style="grid-template-columns:50px 1fr 60px 50px 60px 60px 1fr;">
       <div>Place</div><div>Player</div><div style="text-align:right">Tags</div>
       <div style="text-align:right">Elim</div><div style="text-align:right">Lives</div>
       <div style="text-align:right">Out R</div>
+      <div style="text-align:right" title="Player who delivered the final tag — took your last life">Tagged out by</div>
     </div>
     ${placements.map(pl => buckets[pl].map((r,i) => `
-      <div class="row" style="grid-template-columns:50px 1fr 70px 50px 50px 60px;cursor:default">
+      <div class="row" style="grid-template-columns:50px 1fr 60px 50px 60px 60px 1fr;cursor:default">
         <div class="rank">${i === 0 ? ordinal(pl) : ''}</div>
         <div class="player">
           <span class="pname ${pl===1?'gold-name':pl===2?'silver-name':pl===3?'bronze-name':''}">${escapeHtml(r.name)}</span>
@@ -1083,6 +1084,7 @@ function renderCupDetail(cup) {
         <div style="text-align:right;font-family:var(--mono)">${r.eliminations_made}</div>
         <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${cup.lives - r.lives_lost}/${cup.lives}</div>
         <div style="text-align:right;font-family:var(--mono);color:var(--text-muted)">${r.elim_round === null ? '—' : 'R'+r.elim_round}</div>
+        <div style="text-align:right;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.eliminated_by_steamid ? escapeHtml(SID2NAME[r.eliminated_by_steamid] || '?') : '—'}</div>
       </div>
     `).join('')).join('')}
   `;
