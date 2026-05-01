@@ -250,6 +250,53 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 .mx-sugg-meta { color: var(--text-muted); font-family: var(--mono); font-size: 10px; }
 .mx-sugg-empty { padding: 10px; color: var(--text-muted); font-family: var(--mono); font-size: 11px; text-align: center; }
 
+/* Player-event drilldown overlay (click a player inside cup detail) */
+.pdr-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 100; display: flex; align-items: center; justify-content: center;
+  padding: 20px; animation: fadeIn 0.15s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.pdr-modal {
+  background: var(--bg); border: 1px solid var(--border-bright);
+  border-radius: 12px; padding: 18px 22px; position: relative;
+  width: 100%; max-width: 640px; max-height: 86vh; overflow-y: auto;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+}
+.pdr-close {
+  position: absolute; top: 8px; right: 10px;
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 6px; padding: 0 9px; cursor: pointer;
+  font-size: 18px; line-height: 1.4; color: var(--text-muted);
+  font-family: inherit;
+}
+.pdr-close:hover { color: var(--accent); border-color: var(--accent); }
+.pdr-title {
+  font-size: 17px; font-weight: 700; margin-bottom: 4px; padding-right: 40px;
+}
+.pdr-sub {
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  margin-bottom: 12px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.pdr-round { padding: 6px 0; border-bottom: 1px solid var(--row-border);
+  font-family: var(--mono); font-size: 11px; }
+.pdr-round:last-child { border-bottom: none; }
+.pdr-rh { display: flex; gap: 10px; align-items: baseline; margin-bottom: 3px; }
+.pdr-rh .num { color: var(--accent); font-weight: 700; min-width: 30px; }
+.pdr-rh .map { color: var(--text); flex: 1; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.pdr-rh .my-time { color: var(--text); }
+.pdr-line { display: flex; gap: 8px; align-items: baseline;
+  padding-left: 30px; color: var(--text-dim); margin: 1px 0; }
+.pdr-line .arrow { color: var(--text-muted); width: 14px; flex-shrink: 0; }
+.pdr-line .who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdr-line .who strong { color: var(--text); font-weight: 600; }
+.pdr-line .out-good { color: var(--green); font-weight: 700; flex-shrink: 0; }
+.pdr-line .out-bad { color: var(--red); font-weight: 700; flex-shrink: 0; }
+.pdr-lives { padding-left: 30px; color: var(--text-muted);
+  font-size: 12px; margin-top: 1px; letter-spacing: 1px; }
+
 .tm-summary {
   display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; padding: 10px 14px;
   background: var(--surface); border: 1px solid var(--border-bright); border-radius: 10px;
@@ -1075,7 +1122,7 @@ function renderCupDetail(cup) {
       <div style="text-align:right" title="Player who delivered the final tag — took your last life">Tagged out by</div>
     </div>
     ${placements.map(pl => buckets[pl].map((r,i) => `
-      <div class="row" style="grid-template-columns:50px 1fr 60px 50px 60px 60px 1fr;cursor:default">
+      <div class="row pdr-row" data-event="${cup.event}" data-pid="${r.steamid}" style="grid-template-columns:50px 1fr 60px 50px 60px 60px 1fr;cursor:pointer">
         <div class="rank">${i === 0 ? ordinal(pl) : ''}</div>
         <div class="player">
           <span class="pname ${pl===1?'gold-name':pl===2?'silver-name':pl===3?'bronze-name':''}">${escapeHtml(r.name)}</span>
@@ -1270,6 +1317,15 @@ function attachHandlers() {
       render();
     });
   });
+  // Player row inside cup detail → open per-player drilldown
+  document.querySelectorAll('#evBody .pdr-row').forEach(row => {
+    row.addEventListener('click', e => {
+      e.stopPropagation();
+      var ev = parseInt(row.dataset.event);
+      var sid = row.dataset.pid;
+      openPlayerEventDetail(ev, sid);
+    });
+  });
   // Events row → expand inline
   document.querySelectorAll('#evBody > .row').forEach(row => {
     row.addEventListener('click', () => {
@@ -1288,6 +1344,121 @@ function attachHandlers() {
       }
     });
   });
+}
+
+// ── Player-event drilldown popup ──────────────────────────────────────
+function openPlayerEventDetail(eventNum, sid) {
+  var cup = DATA.cups.find(c => c.event === eventNum);
+  if (!cup || cup.stub || !cup.rounds) return;
+  var pResult = cup.results.find(r => r.steamid === sid);
+  if (!pResult) return;
+  showOverlay(renderPlayerEventDetail(cup, pResult));
+}
+
+function renderPlayerEventDetail(cup, pResult) {
+  var sid = pResult.steamid;
+  var lives_start = cup.lives;
+  var prevLives = {};
+  var entries = [];
+  var alreadyEliminated = false;
+
+  cup.rounds.forEach((rnd, idx) => {
+    var me = rnd.players.find(p => p.sid === sid);
+    if (me && !alreadyEliminated) {
+      var prev_my = (sid in prevLives) ? prevLives[sid] : lives_start;
+      var iLostLife = me.lives < prev_my;
+      var pursuerEntry = me.pur ? rnd.players.find(p => p.sid === me.pur) : null;
+      var targetEntry  = me.tgt ? rnd.players.find(p => p.sid === me.tgt) : null;
+      var iTaggedTgt = false;
+      if (targetEntry) {
+        var prev_tgt = (me.tgt in prevLives) ? prevLives[me.tgt] : lives_start;
+        iTaggedTgt = targetEntry.lives < prev_tgt;
+      }
+      entries.push({
+        round: idx, map: rnd.map, myTime: me.time,
+        pursuerSid: me.pur, pursuerTime: pursuerEntry ? pursuerEntry.time : null,
+        pursuerName: me.pur ? (SID2NAME[me.pur] || '?') : null, iLostLife: iLostLife,
+        targetSid: me.tgt, targetTime: targetEntry ? targetEntry.time : null,
+        targetName: me.tgt ? (SID2NAME[me.tgt] || '?') : null, iTaggedTgt: iTaggedTgt,
+        livesEnd: me.lives,
+      });
+      if (me.lives === 0) alreadyEliminated = true;
+    }
+    rnd.players.forEach(p => { prevLives[p.sid] = p.lives; });
+  });
+
+  function fmtTime(t) {
+    if (t === 'NaN' || t === undefined || t === null) return 'DNF';
+    var min = Math.floor(t / 60);
+    var sec = t - min * 60;
+    return min ? min + ':' + sec.toFixed(3).padStart(6, '0') : sec.toFixed(3);
+  }
+  function livesIcon(n, total) {
+    var s = '';
+    for (var i = 0; i < total; i++) s += i < n ? '●' : '○';
+    return s;
+  }
+
+  var elimLine;
+  if (pResult.elim_round === null) {
+    elimLine = pResult.placement === 1 ? '🏆 Survived (winner)' : 'Survived';
+  } else {
+    var killer = pResult.eliminated_by_steamid
+      ? escapeHtml(SID2NAME[pResult.eliminated_by_steamid] || '?')
+      : '?';
+    elimLine = `Out R${pResult.elim_round} by ${killer}`;
+  }
+
+  return `
+    <div class="pdr-overlay" id="pdrOverlay">
+      <div class="pdr-modal">
+        <button class="pdr-close" id="pdrClose" title="Close (Esc)">×</button>
+        <div class="pdr-title">${escapeHtml(pResult.name)} — Event #${cup.event}</div>
+        <div class="pdr-sub">
+          ${ordinal(pResult.placement)} place · ${elimLine}
+          · ${pResult.tags_made}t / ${pResult.eliminations_made}e ·
+          ${cup.lives - pResult.lives_lost}/${cup.lives} lives
+        </div>
+        ${entries.map(e => `
+          <div class="pdr-round">
+            <div class="pdr-rh">
+              <span class="num">R${e.round}</span>
+              <span class="map">${escapeHtml(e.map)}</span>
+              <span class="my-time">${fmtTime(e.myTime)}</span>
+            </div>
+            <div class="pdr-line">
+              <span class="arrow">←</span>
+              <span class="who">Pursued by <strong>${escapeHtml(e.pursuerName || '—')}</strong>${e.pursuerTime != null ? ' (' + fmtTime(e.pursuerTime) + ')' : ''}</span>
+              <span class="${e.iLostLife ? 'out-bad' : 'out-good'}">${e.iLostLife ? 'TAGGED -1' : 'DODGED'}</span>
+            </div>
+            <div class="pdr-line">
+              <span class="arrow">→</span>
+              <span class="who">Pursuing <strong>${escapeHtml(e.targetName || '—')}</strong>${e.targetTime != null ? ' (' + fmtTime(e.targetTime) + ')' : ''}</span>
+              <span class="${e.iTaggedTgt ? 'out-good' : 'out-bad'}">${e.iTaggedTgt ? 'TAGGED' : 'ESCAPED'}</span>
+            </div>
+            <div class="pdr-lives">${livesIcon(e.livesEnd, cup.lives)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function showOverlay(html) {
+  var existing = document.getElementById('pdrOverlay');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+  var overlay = document.getElementById('pdrOverlay');
+  function close() {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) close();   // backdrop click
+  });
+  document.getElementById('pdrClose').addEventListener('click', close);
 }
 
 // ── Navigation ────────────────────────────────────────────────────────

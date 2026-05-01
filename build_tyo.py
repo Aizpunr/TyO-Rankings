@@ -259,6 +259,24 @@ def build_cup(event, date, data):
         })
     results.sort(key=lambda r: (r['placement'], r['name'].lower()))
 
+    # Slim per-round data for the player-event drilldown popup. Compact keys
+    # to keep payload size reasonable. Round number is the array index.
+    rounds_out = []
+    for rnd in rounds:
+        rd_players = []
+        for pr in rnd['playerResults']:
+            rd_players.append({
+                'sid': str(pr['steamID']),
+                'time': pr['time'],
+                'pur': str(pr['targetedBySteamID']) if pr.get('targetedBySteamID') else None,
+                'tgt': str(pr['targetSteamID']) if pr.get('targetSteamID') else None,
+                'lives': pr.get('livesRemaining', lives),
+            })
+        rounds_out.append({
+            'map': rnd.get('level', {}).get('Name', ''),
+            'players': rd_players,
+        })
+
     cup_obj = {
         'event': event,
         'date': date,
@@ -271,6 +289,7 @@ def build_cup(event, date, data):
         'winner_steamid': str(winner_sid) if winner_sid else None,
         'winner_name': resolve(str(winner_sid), observed_names[winner_sid]) if winner_sid else None,
         'results': results,
+        'rounds': rounds_out,
     }
 
     # Surface internals for player rollup + verification (popped before write)
