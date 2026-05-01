@@ -9,7 +9,7 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root { --green:#10b981; --red:#ef4444; --mono:'JetBrains Mono',monospace;
-        --gold:#f59e0b; --silver:#cbd5e1; --bronze:#b45309; }
+        --gold:#f59e0b; --silver:#9eb1cf; --bronze:#b45309; }
 [data-theme="dark"] { --accent:#f59e0b; --bg:#08080d; --surface:rgba(255,255,255,0.02);
   --border:rgba(255,255,255,0.06); --border-bright:rgba(255,255,255,0.08);
   --text:#e5e7eb; --text-dim:#9ca3af; --text-muted:#6b7280; --text-dark:#4b5563;
@@ -164,7 +164,16 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 .footer-link.dc:hover { color: #5865f2; }
 
 .gold-name { color: var(--gold); }
-.silver-name { color: var(--silver); }
+.silver-name {
+  background: linear-gradient(135deg, #6b7d99 0%, #d8e3f5 45%, #ffffff 50%, #d8e3f5 55%, #6b7d99 100%);
+  background-size: 200% 100%;
+  background-position: 50% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  text-shadow: 0 0 1px rgba(158, 177, 207, 0.4);
+}
 .bronze-name { color: var(--bronze); }
 
 .medal {
@@ -232,6 +241,8 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 }
 .tm-row .tm-name { font-weight: 600; }
 .tm-row .tm-cnt { font-family: var(--mono); color: var(--accent); text-align: right; }
+.tm-row[data-counterpart-sid]:hover { background: var(--row-hover); }
+.tm-row[data-counterpart-sid]:hover .tm-name { color: var(--accent); }
 
 .mx-suggestions {
   display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
@@ -1093,7 +1104,7 @@ function renderStubCup(cup) {
     <div class="cup-meta">
       <strong>Event #${cup.event}</strong> · ${cup.date} · <span class="badge stub">no log</span><br>
       Mapper: ${escapeHtml(cup.mapper_name || '?')} · Winner: ${escapeHtml(cup.winner_name || '?')}<br>
-      <span style="color:var(--text-muted)">Hand-typed metadata only — agix has not provided the JSON for this event.</span>
+      <span style="color:var(--text-muted)">No log for this event, only winner was recorded.</span>
     </div>
   `;
 }
@@ -1174,10 +1185,10 @@ function renderPlayerInfo(ctrl) {
       <div class="stat"><span class="label">Times eliminated</span><span class="value">${p.times_eliminated_total}</span></div>
     </div>
     <div class="tm-grid">
-      ${matrixPanel('Tags they make (top victims)', p.tag_matrix.tags_on)}
-      ${matrixPanel('Tagged by (top pursuers)', p.tag_matrix.tagged_by)}
-      ${matrixPanel('Eliminations made (kills)', p.tag_matrix.elims_on)}
-      ${matrixPanel('Eliminated by (their killers)', p.tag_matrix.elimd_by)}
+      ${matrixPanel('Tags they make (top victims)',     p.tag_matrix.tags_on,   'tags_on',   p.steamid)}
+      ${matrixPanel('Tagged by (top pursuers)',         p.tag_matrix.tagged_by, 'tagged_by', p.steamid)}
+      ${matrixPanel('Eliminations made (kills)',        p.tag_matrix.elims_on,  'elims_on',  p.steamid)}
+      ${matrixPanel('Eliminated by (their killers)',    p.tag_matrix.elimd_by,  'elimd_by',  p.steamid)}
     </div>
     ${renderPlayerInfoChart(p)}
   `;
@@ -1252,13 +1263,13 @@ function updateSuggestions(q) {
   });
 }
 
-function matrixPanel(title, sparseMap) {
+function matrixPanel(title, sparseMap, panelType, focalSid) {
   var entries = Object.entries(sparseMap).sort((a,b)=>b[1]-a[1]).slice(0, 10);
   if (!entries.length) return `<div class="tm-panel"><h3>${title}</h3>
     <div style="color:var(--text-muted);font-size:11px;padding:8px 0">No data.</div></div>`;
   return `<div class="tm-panel"><h3>${title}</h3>
     ${entries.map(([sid, cnt]) => `
-      <div class="tm-row">
+      <div class="tm-row" data-focal-sid="${focalSid}" data-counterpart-sid="${sid}" data-panel-type="${panelType}" style="cursor:pointer">
         <div class="tm-name">${escapeHtml(SID2NAME[sid] || ('Unknown('+sid+')'))}</div>
         <div class="tm-cnt">${cnt}</div>
       </div>`).join('')}
@@ -1315,6 +1326,12 @@ function attachHandlers() {
       if (eventSort.col === c) eventSort.dir = -eventSort.dir;
       else { eventSort.col = c; eventSort.dir = (c === 'event' || c === 'date' || c === 'lobby_size') ? -1 : 1; }
       render();
+    });
+  });
+  // Tag-matrix counterpart click → list specific event+round instances
+  document.querySelectorAll('#content .tm-row[data-counterpart-sid]').forEach(row => {
+    row.addEventListener('click', () => {
+      openInteractionList(row.dataset.focalSid, row.dataset.counterpartSid, row.dataset.panelType);
     });
   });
   // Player row inside cup detail → open per-player drilldown
@@ -1380,6 +1397,7 @@ function renderPlayerEventDetail(cup, pResult) {
         pursuerName: me.pur ? (SID2NAME[me.pur] || '?') : null, iLostLife: iLostLife,
         targetSid: me.tgt, targetTime: targetEntry ? targetEntry.time : null,
         targetName: me.tgt ? (SID2NAME[me.tgt] || '?') : null, iTaggedTgt: iTaggedTgt,
+        targetLivesAfter: targetEntry ? targetEntry.lives : null,
         livesEnd: me.lives,
       });
       if (me.lives === 0) alreadyEliminated = true;
@@ -1429,14 +1447,131 @@ function renderPlayerEventDetail(cup, pResult) {
             <div class="pdr-line">
               <span class="arrow">←</span>
               <span class="who">Pursued by <strong>${escapeHtml(e.pursuerName || '—')}</strong>${e.pursuerTime != null ? ' (' + fmtTime(e.pursuerTime) + ')' : ''}</span>
-              <span class="${e.iLostLife ? 'out-bad' : 'out-good'}">${e.iLostLife ? 'TAGGED -1' : 'DODGED'}</span>
+              ${e.iLostLife ? heartsFor(e.livesEnd, cup.lives) : '<span class="out-good">DODGED</span>'}
             </div>
             <div class="pdr-line">
               <span class="arrow">→</span>
               <span class="who">Pursuing <strong>${escapeHtml(e.targetName || '—')}</strong>${e.targetTime != null ? ' (' + fmtTime(e.targetTime) + ')' : ''}</span>
-              <span class="${e.iTaggedTgt ? 'out-good' : 'out-bad'}">${e.iTaggedTgt ? 'TAGGED' : 'ESCAPED'}</span>
+              ${e.iTaggedTgt ? heartsFor(e.targetLivesAfter, cup.lives) : '<span class="out-bad">ESCAPED</span>'}
             </div>
             <div class="pdr-lives">${livesIcon(e.livesEnd, cup.lives)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ── Tag-matrix interaction list (click a counterpart in Player Info) ──
+function findInteractions(focalSid, otherSid, panelType) {
+  var instances = [];
+  DATA.cups.forEach(cup => {
+    if (cup.stub || !cup.rounds) return;
+    var prevLives = {};
+    var lives_start = cup.lives;
+    cup.rounds.forEach((rnd, idx) => {
+      var focal = rnd.players.find(p => p.sid === focalSid);
+      var other = rnd.players.find(p => p.sid === otherSid);
+      if (focal && other) {
+        var prevF = (focalSid in prevLives) ? prevLives[focalSid] : lives_start;
+        var prevO = (otherSid in prevLives) ? prevLives[otherSid] : lives_start;
+        var fLost = focal.lives < prevF;
+        var oLost = other.lives < prevO;
+        var matched = false;
+
+        if (panelType === 'tags_on'   && focal.tgt === otherSid && oLost && other.lives > 0)  matched = true;
+        if (panelType === 'elims_on'  && focal.tgt === otherSid && oLost && other.lives === 0) matched = true;
+        if (panelType === 'tagged_by' && focal.pur === otherSid && fLost && focal.lives > 0)  matched = true;
+        if (panelType === 'elimd_by'  && focal.pur === otherSid && fLost && focal.lives === 0) matched = true;
+
+        if (matched) {
+          instances.push({
+            event: cup.event, date: cup.date, map: rnd.map, round: idx,
+            rounds_total: cup.rounds_total,
+            focalTime: focal.time, otherTime: other.time,
+            focalLivesAfter: focal.lives, otherLivesAfter: other.lives,
+            cupLives: cup.lives,
+          });
+        }
+      }
+      // Always advance prevLives — needed for cycle continuity even if focal/other absent
+      rnd.players.forEach(p => { prevLives[p.sid] = p.lives; });
+    });
+  });
+  return instances;
+}
+
+function openInteractionList(focalSid, otherSid, panelType) {
+  var instances = findInteractions(focalSid, otherSid, panelType);
+  showOverlay(renderInteractionList(focalSid, otherSid, panelType, instances));
+}
+
+function renderInteractionList(focalSid, otherSid, panelType, instances) {
+  var focalName = SID2NAME[focalSid] || '?';
+  var otherName = SID2NAME[otherSid] || '?';
+  var titleByPanel = {
+    'tags_on':   `${focalName} → ${otherName}: tags`,
+    'elims_on':  `${focalName} eliminated ${otherName}`,
+    'tagged_by': `${otherName} → ${focalName}: tags (against you)`,
+    'elimd_by':  `${otherName} eliminated ${focalName}`,
+  };
+
+  function fmtTime(t) {
+    if (t === 'NaN' || t === undefined || t === null) return 'DNF';
+    var min = Math.floor(t / 60);
+    var sec = t - min * 60;
+    return min ? min + ':' + sec.toFixed(3).padStart(6, '0') : sec.toFixed(3);
+  }
+
+  // Group by event
+  var byEvent = {};
+  instances.forEach(inst => {
+    (byEvent[inst.event] = byEvent[inst.event] || { event: inst.event, date: inst.date, rounds_total: inst.rounds_total, items: [] }).items.push(inst);
+  });
+  var groups = Object.values(byEvent).sort((a, b) => b.event - a.event);
+
+  var emptyMsg = instances.length === 0
+    ? `<div class="pdr-round" style="color:var(--text-muted);text-align:center;padding:20px 0">No instances found.</div>`
+    : '';
+
+  // Pursuer (winning) green, victim (losing) red. Outcome implicit from panel title.
+  function timeLine(inst) {
+    var focalIsPursuer = (panelType === 'tags_on' || panelType === 'elims_on');
+    var pursuerName = focalIsPursuer ? focalName : otherName;
+    var pursuerTime = focalIsPursuer ? inst.focalTime : inst.otherTime;
+    var victimName  = focalIsPursuer ? otherName : focalName;
+    var victimTime  = focalIsPursuer ? inst.otherTime : inst.focalTime;
+    return `<span style="color:var(--green);font-weight:700">${escapeHtml(pursuerName)}</span> <span style="color:var(--green);font-family:var(--mono)">${fmtTime(pursuerTime)}</span> <span style="color:var(--text-muted)">vs</span> <span style="color:var(--red);font-weight:700">${escapeHtml(victimName)}</span> <span style="color:var(--red);font-family:var(--mono)">${fmtTime(victimTime)}</span>`;
+  }
+
+
+  return `
+    <div class="pdr-overlay" id="pdrOverlay">
+      <div class="pdr-modal">
+        <button class="pdr-close" id="pdrClose" title="Close (Esc)">×</button>
+        <div class="pdr-title">${escapeHtml(titleByPanel[panelType] || '')}</div>
+        <div class="pdr-sub">
+          ${instances.length} instance${instances.length === 1 ? '' : 's'} across ${groups.length} cup${groups.length === 1 ? '' : 's'}.
+          Click any event header to jump to it.
+        </div>
+        ${emptyMsg}
+        ${groups.map(g => `
+          <div class="pdr-round">
+            <div class="pdr-rh" data-jump-event="${g.event}" style="cursor:pointer">
+              <span class="num">#${g.event}</span>
+              <span class="map">${g.date}</span>
+              <span class="my-time" style="color:var(--accent)">${g.items.length}×</span>
+            </div>
+            ${g.items.map(inst => {
+              var focalIsPursuer = (panelType === 'tags_on' || panelType === 'elims_on');
+              var victimLivesAfter = focalIsPursuer ? inst.otherLivesAfter : inst.focalLivesAfter;
+              return `
+              <div class="pdr-line" style="flex-wrap:wrap">
+                <span class="arrow" style="color:var(--accent)">R${inst.round}${inst.round === inst.rounds_total - 1 ? '*' : ''}</span>
+                <span class="who"><span style="color:var(--text)">${escapeHtml(inst.map)}</span> <span style="color:var(--text-muted)">·</span> ${timeLine(inst)}</span>
+                <span style="margin-left:8px">${heartsFor(victimLivesAfter, inst.cupLives)}</span>
+              </div>`;
+            }).join('')}
           </div>
         `).join('')}
       </div>
@@ -1459,6 +1594,14 @@ function showOverlay(html) {
     if (e.target === overlay) close();   // backdrop click
   });
   document.getElementById('pdrClose').addEventListener('click', close);
+  // In-modal "jump to event" header (used by interaction-list popup)
+  overlay.querySelectorAll('[data-jump-event]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      close();
+      jumpToEvent(parseInt(el.dataset.jumpEvent));
+    });
+  });
 }
 
 // ── Navigation ────────────────────────────────────────────────────────
@@ -1476,6 +1619,19 @@ function jumpToEvent(eventNum) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
+function heartsFor(victimLivesAfter, cupLives) {
+  // Hearts state: alive (filled red) → lost this round (red ♥ with X overlay)
+  //              → lost earlier (faint ♡).
+  var alive   = victimLivesAfter;
+  var crossed = 1;
+  var earlier = cupLives - alive - crossed;
+  var out = '';
+  for (var i = 0; i < alive;   i++) out += `<span style="color:var(--red)">♥</span>`;
+  for (var i = 0; i < crossed; i++) out += `<span style="position:relative;display:inline-block;color:var(--red)">♥<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text);font-weight:900;font-size:0.95em;pointer-events:none;line-height:1">✕</span></span>`;
+  for (var i = 0; i < earlier; i++) out += `<span style="color:var(--text-dark)">♡</span>`;
+  return `<span style="letter-spacing:2px;font-size:13px">${out}</span>`;
+}
+
 function ordinal(n) {
   if (n === 1) return '1st';
   if (n === 2) return '2nd';
