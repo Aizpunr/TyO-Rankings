@@ -163,6 +163,21 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 .footer-link.tw:hover { color: #9146ff; }
 .footer-link.dc:hover { color: #5865f2; }
 
+/* Snapshot deltas (since-last-cup arrows on Season 2 / All Time) */
+.delta-up      { color: var(--green); font-size: 10px; margin-left: 4px; font-weight: 700; }
+.delta-down    { color: var(--red);   font-size: 10px; margin-left: 4px; font-weight: 700; }
+.elo-delta-up  { color: var(--green); font-size: 10px; font-family: var(--mono); }
+.elo-delta-down{ color: var(--red);   font-size: 10px; font-family: var(--mono); }
+
+/* Score cell with fixed slots — keeps the score pinned even when delta varies */
+.score-cell { display: flex; justify-content: flex-end; align-items: baseline; gap: 5px;
+  font-family: var(--mono); }
+.score-cell .score-val { color: var(--accent); font-weight: 700; }
+.score-cell .score-slot { min-width: 44px; text-align: left; white-space: nowrap; }
+@media(max-width:700px) {
+  .score-cell .score-slot { display: none; }
+}
+
 .gold-name { color: var(--gold); }
 .silver-name {
   background: linear-gradient(135deg, #6b7d99 0%, #d8e3f5 45%, #ffffff 50%, #d8e3f5 55%, #6b7d99 100%);
@@ -407,6 +422,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 // ── State ─────────────────────────────────────────────────────────────
 let DATA = null;
+let SNAP = null;
 let SID2NAME = {};
 let view = 'season2';                         // 'season2' | 'alltime' | 'events' | 'playerinfo'
 let rankingSort = { col: 'points', dir: -1 }; // re-init when switching ranking mode
@@ -416,10 +432,13 @@ let matrixSelected = null;
 function rankMode() { return view === 'alltime' ? 'elo' : 'placement'; }
 
 // ── Load + dispatch ───────────────────────────────────────────────────
-fetch('tyo.json?v=' + Date.now())
-  .then(r => r.json())
-  .then(d => {
+Promise.all([
+  fetch('tyo.json?v=' + Date.now()).then(r => r.json()),
+  fetch('snapshot.json?v=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
+])
+  .then(([d, s]) => {
     DATA = d;
+    SNAP = s;
     SID2NAME = {};
     d.players.forEach(p => SID2NAME[p.steamid] = p.name);
     document.getElementById('subInfo').textContent =
@@ -454,8 +473,8 @@ function render() {
 }
 
 // ── Ranking view ──────────────────────────────────────────────────────
-const RANK_PLACEMENT_COLS = '40px 1fr 70px 50px 70px 50px 50px';
-const RANK_ELO_COLS       = '40px 1fr 70px 90px 50px 70px 90px 55px';
+const RANK_PLACEMENT_COLS = '40px 1fr 110px 50px 70px 50px 50px';
+const RANK_ELO_COLS       = '40px 1fr 110px 90px 50px 70px 80px 50px';
 function renderRanking(ctrl) {
   var mode = rankMode();
   ctrl.innerHTML =
@@ -584,11 +603,14 @@ function renderRankRows(rows, q) {
       var tagSum = r.history.reduce((t,h)=>t+(h.tags||0),0);
       var elimSum = r.history.reduce((t,h)=>t+(h.elims||0),0);
       var nameClass = pod.gold ? 'gold-name' : '';
+      var prev = snapPrev(r.steamid);
+      var rDelta = prev ? rankDeltaHtml(prev[0], i + 1) : '';
+      var sDelta = prev ? scoreDeltaHtml(prev[1], r.points, 'season') : '';
       return `
         <div class="row" data-sid="${r.steamid}" style="grid-template-columns:${RANK_PLACEMENT_COLS};">
-          <div class="rank">${i + 1}</div>
+          <div class="rank">${i + 1}${rDelta}</div>
           <div class="player"><span class="pname ${nameClass}">${escapeHtml(r.name)}</span></div>
-          <div style="text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700">${r.points}</div>
+          <div class="score-cell"><span class="score-val">${r.points}</span><span class="score-slot">${sDelta}</span></div>
           <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups_in_window}</div>
           <div style="text-align:right;font-family:var(--mono)">
             <span style="color:var(--gold)">${pod.gold}</span>/<span style="color:var(--silver)">${pod.silver}</span>/<span style="color:var(--bronze)">${pod.bronze}</span>
@@ -605,11 +627,14 @@ function renderRankRows(rows, q) {
   // ELO mode
   return rows.filter(r => !q || r.name.toLowerCase().includes(q)).map((r, i) => {
     var nameClass = r.gold ? 'gold-name' : '';
+    var prev = snapPrev(r.steamid);
+    var rDelta = prev ? rankDeltaHtml(prev[0], i + 1) : '';
+    var sDelta = prev ? scoreDeltaHtml(prev[1], r.rating, 'elo') : '';
     return `
       <div class="row" data-sid="${r.steamid}" style="grid-template-columns:${RANK_ELO_COLS};">
-        <div class="rank">${i + 1}</div>
+        <div class="rank">${i + 1}${rDelta}</div>
         <div class="player"><span class="pname ${nameClass}">${escapeHtml(r.name)}</span></div>
-        <div style="text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700">${r.rating.toFixed(1)}</div>
+        <div class="score-cell"><span class="score-val">${r.rating.toFixed(1)}</span><span class="score-slot">${sDelta}</span></div>
         <div class="pod-cell" style="text-align:right">${podiumCell(r.gold, r.silver, r.bronze)}</div>
         <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${r.cups}</div>
         <div class="m-hide" style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${(winPct(r) * 100).toFixed(1)}%</div>
@@ -1616,6 +1641,32 @@ function jumpToEvent(eventNum) {
       row.click();
     }
   });
+}
+
+// ── Snapshot deltas ───────────────────────────────────────────────────
+function snapPrev(steamid) {
+  if (!SNAP) return null;
+  var key = rankMode() === 'placement' ? 'season' : 'elo';
+  return SNAP[key] && SNAP[key][steamid];
+}
+function rankDeltaHtml(prevRank, currentRank) {
+  if (!prevRank) return '';
+  var d = prevRank - currentRank;
+  if (d === 0) return '';
+  return d > 0
+    ? `<span class="delta-up">▲${d}</span>`
+    : `<span class="delta-down">▼${-d}</span>`;
+}
+function scoreDeltaHtml(prevScore, currentScore, kind) {
+  if (prevScore == null) return '';
+  var d = currentScore - prevScore;
+  var threshold = kind === 'elo' ? 0.1 : 1;
+  if (Math.abs(d) < threshold) return '';
+  var sign = d > 0 ? '+' : '';
+  var fmt = kind === 'elo' ? d.toFixed(1) : Math.round(d);
+  return d > 0
+    ? `<span class="elo-delta-up">${sign}${fmt}</span>`
+    : `<span class="elo-delta-down">${fmt}</span>`;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────

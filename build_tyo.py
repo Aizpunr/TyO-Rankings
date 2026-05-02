@@ -30,7 +30,8 @@ OUT_JSON = os.path.join(_dir, 'tyo.json')
 # Curve flattens after 2nd place; positions 21+ score 0.
 PLACEMENT_PTS = [300, 200, 150, 120, 100, 85, 72, 62, 53, 45,
                   38,  32,  27,  22,  18, 14, 11,  8,  6,  4]  # idx 0 = 1st place
-RANK_WINDOW = 14
+SEASON_2_START_EVENT = 28      # fixed-start season window — Season 2 begins at event 28
+                                # (runs through ~mid-June 2026, no upper bound yet)
 RANK_BEST_OF = 10
 
 # ELO ranking parameters (v2 — pair-based, two variants: standard + lobby-weighted)
@@ -430,13 +431,15 @@ def build_players(cups_real):
 # ── Ranking ──────────────────────────────────────────────────────────────
 
 def compute_ranking(players, cups_real):
-    """ATP-style: rolling window of last RANK_WINDOW non-stub events,
-    best RANK_BEST_OF per-cup scores count."""
+    """Season 2: fixed-start window from SEASON_2_START_EVENT onwards (no rolling
+    drop-off). Best RANK_BEST_OF per-cup scores count toward the total."""
     if not cups_real:
-        return {'scheme': 'atp_hybrid_v1', 'players': []}
+        return {'scheme': 'placement_only_v2', 'players': []}
 
     event_nums = sorted({c['event'] for c in cups_real})
-    window_events = set(event_nums[-RANK_WINDOW:])
+    window_events = {e for e in event_nums if e >= SEASON_2_START_EVENT}
+    if not window_events:
+        return {'scheme': 'placement_only_v2', 'players': []}
     window_first = min(window_events)
     window_last = max(window_events)
 
@@ -483,7 +486,8 @@ def compute_ranking(players, cups_real):
 
     return {
         'scheme': 'placement_only_v2',
-        'window': RANK_WINDOW,
+        'season_start_event': SEASON_2_START_EVENT,
+        'window': len(window_events),
         'best_of': RANK_BEST_OF,
         'window_first_event': window_first,
         'window_last_event': window_last,
@@ -886,7 +890,7 @@ def main():
             'stub_cups': len(stub_cups),
             'total_players': len(players),
             'last_event': max((c['event'] for c in cups_combined), default=None),
-            'ranking_window': RANK_WINDOW,
+            'ranking_window': ranking.get('window', 0),
             'ranking_best_of': RANK_BEST_OF,
         },
         'cups': cups_combined,
