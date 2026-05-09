@@ -1071,7 +1071,7 @@ function cssVar(n) {
 }
 
 // ── Events view (sortable list, click row to expand inline) ──────────
-const EVENTS_COLS = '40px 80px 90px 1fr 60px 90px';
+const EVENTS_COLS = '40px 80px 90px 1fr 60px 60px 90px';
 function renderEvents(ctrl) {
   ctrl.innerHTML = '';
   var rows = DATA.cups.slice();
@@ -1083,6 +1083,7 @@ function renderEvents(ctrl) {
       <div data-sort="date" class="m-hide">Date${earrow('date')}</div>
       <div data-sort="winner">Winner${earrow('winner')}</div>
       <div data-sort="lobby_size" style="text-align:right">Players${earrow('lobby_size')}</div>
+      <div data-sort="sof" class="m-hide" style="text-align:right" title="Cross-comp Strength of Field">SOF${earrow('sof')}</div>
       <div data-sort="format" class="m-hide" style="text-align:right">Format${earrow('format')}</div>
     </div>`;
   var bodyHtml = rows.map((c, i) => renderEventRow(c, i + 1)).join('');
@@ -1097,6 +1098,7 @@ function eventSorter(s) {
     if (s.col === 'winner') { av = (a.winner_name||'').toLowerCase(); bv = (b.winner_name||'').toLowerCase();
       return s.dir * (av < bv ? -1 : av > bv ? 1 : 0); }
     if (s.col === 'lobby_size') { av = a.lobby_size||0; bv = b.lobby_size||0; return s.dir * (av - bv); }
+    if (s.col === 'sof') { av = a.sof==null?-1:a.sof; bv = b.sof==null?-1:b.sof; return s.dir * (av - bv); }
     if (s.col === 'format') {
       var order = {'standard':0, 'roulette':1, 'non_standard':2, undefined:3};
       av = a.stub ? 4 : order[a.format]; bv = b.stub ? 4 : order[b.format];
@@ -1111,6 +1113,7 @@ function renderEventRow(c, rowIdx) {
     ? `<span class="badge stub">stub</span>`
     : (c.format !== 'standard' ? `<span class="badge ${c.format}">${c.format}</span>` : `<span style="color:var(--text-dark);font-family:var(--mono);font-size:10px">—</span>`);
   var lobby = c.stub ? '—' : c.lobby_size;
+  var sof = (c.stub || c.sof == null) ? '—' : c.sof.toFixed(1);
   var rowClass = c.stub ? 'row stub' : 'row';
   return `
     <div class="${rowClass}" data-event="${c.event}" style="grid-template-columns:${EVENTS_COLS};">
@@ -1119,6 +1122,7 @@ function renderEventRow(c, rowIdx) {
       <div class="m-hide" style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${c.date}</div>
       <div style="font-weight:600;color:${winnerColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.winner_name || '?')}</div>
       <div style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--text-muted)">${lobby}</div>
+      <div class="m-hide" style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--text-muted)">${sof}</div>
       <div class="m-hide" style="text-align:right">${fmt}</div>
     </div>
     <div class="detail" id="ev-${c.event}" style="display:none">${c.stub ? renderStubCup(c) : renderCupDetail(c)}</div>

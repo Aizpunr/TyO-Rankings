@@ -26,6 +26,15 @@ LOGS_DIR = os.path.join(_dir, 'logs')
 EVENTS_MD = os.path.join(_dir, 'events.md')
 OUT_JSON = os.path.join(_dir, 'tyo.json')
 
+# Cross-comp SOF source: cups[].sof comes from the holistic project's
+# allcompdata.json, where SOF is computed pre-event with cross-comp ratings.
+# Local-only for now; future move: pull from a published GitHub raw URL once
+# the holistic page is hosted. See project_cross_comp_elo.md.
+ALLCOMPDATA = os.path.normpath(
+    os.path.join(_dir, '..', 'zeepkist holistic', 'allcompdata.json')
+)
+_TYO_EVENT_RE = re.compile(r'^TyO Event (\d+)$')
+
 # Ranking parameters — pure placement-based (no win bonus, no tag/elim contribution).
 # Curve flattens after 2nd place; positions 21+ score 0.
 PLACEMENT_PTS = [300, 200, 150, 120, 100, 85, 72, 62, 53, 45,
@@ -836,6 +845,36 @@ def verify_elo(ranking_elo, players, cups_real):
     return warnings
 
 
+# ── Cross-comp SOF ──────────────────────────────────────────────────────
+
+def load_cross_comp_sof():
+    """{event_num: sof} for TyO events from the holistic project's
+    allcompdata.json. Returns {} (with a warning) if the file is missing —
+    SOF is non-fatal so TyO can still rebuild without the cross-comp side
+    being present."""
+    if not os.path.exists(ALLCOMPDATA):
+        print(f'[sof] {ALLCOMPDATA} not found — skipping SOF attach')
+        return {}
+    try:
+        with open(ALLCOMPDATA, encoding='utf-8') as fp:
+            data = json.load(fp)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f'[sof] failed to read {ALLCOMPDATA}: {e}')
+        return {}
+    out = {}
+    for ev in data.get('events') or []:
+        if ev.get('comp') != 'tyo':
+            continue
+        m = _TYO_EVENT_RE.match(ev.get('id', ''))
+        if not m:
+            continue
+        sof = ev.get('sof')
+        if sof is None:
+            continue
+        out[int(m.group(1))] = sof
+    return out
+
+
 # ── Main ────────────────────────────────────────────────────────────────
 
 def main():
@@ -874,6 +913,17 @@ def main():
     warnings, cross_mismatches, fmt_counts = verify(cups_real, players, events_meta)
     elo_warnings = verify_elo(ranking_elo, players, cups_real)
     warnings.extend(elo_warnings)
+
+    # Attach cross-comp SOF per cup (non-stubs only)
+    sof_map = load_cross_comp_sof()
+    sof_attached = 0
+    for cup in cups_combined:
+        if cup.get('stub'):
+            continue
+        sof = sof_map.get(cup['event'])
+        if sof is not None:
+            cup['sof'] = sof
+            sof_attached += 1
 
     # Strip internals before serializing
     for cup in cups_combined:
@@ -932,6 +982,7 @@ def main():
         print(f"  Ranking window: events {ranking['window_first_event']}-"
               f"{ranking['window_last_event']} ({ranking['window']}), "
               f"best-of-{ranking['best_of']}")
+    print(f'  Cross-comp SOF attached: {sof_attached}/{n_real} cups')
 
     # Historic wins summary
     h_total = len(historic_matched) + len(historic_unmatched)
