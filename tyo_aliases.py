@@ -1,21 +1,25 @@
 """Name resolution for TyO. SteamID is the primary key; this module only
 decides which display string to associate with each steamID."""
-import os, sys, re, io
+import ast, os, re
 from collections import Counter
 
 _dir = os.path.dirname(os.path.abspath(__file__))
-elo_dir = os.path.join(os.path.dirname(_dir), 'zeepkist cotd elo')
-sys.path.insert(0, elo_dir)
+_elo_engine = os.path.join(os.path.dirname(_dir), 'zeepkist cotd elo', 'elo_engine.py')
 
-# elo_engine.py runs its full COTD pipeline at import time (no __main__ guard)
-# and calls sys.stdout.reconfigure, so we need a real text stream that supports
-# reconfigure. Redirect to a TextIOWrapper over BytesIO and discard.
-_real_stdout = sys.stdout
-sys.stdout = io.TextIOWrapper(io.BytesIO(), encoding='utf-8', write_through=True)
+# Pull CANONICAL out of elo_engine.py via AST so we don't trigger its COTD
+# pipeline (which parses xlsx files that may be in flux on aizpun's machine).
+CANONICAL: dict[str, list[str]] = {}
 try:
-    from elo_engine import CANONICAL  # type: ignore
-finally:
-    sys.stdout = _real_stdout
+    _tree = ast.parse(open(_elo_engine, encoding='utf-8').read())
+    for _node in _tree.body:
+        if (isinstance(_node, ast.Assign)
+                and len(_node.targets) == 1
+                and isinstance(_node.targets[0], ast.Name)
+                and _node.targets[0].id == 'CANONICAL'):
+            CANONICAL = ast.literal_eval(_node.value)
+            break
+except (OSError, SyntaxError, ValueError):
+    pass
 
 # Reverse lookup: alias -> canonical
 NAME_MAP = {}

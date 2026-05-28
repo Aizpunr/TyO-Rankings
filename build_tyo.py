@@ -225,6 +225,28 @@ def build_cup(event, date, data):
     # Note: by spec we count tags_made as non-blow tag credits and elims_made
     # as blow credits, so tags_made + elims_made = total credits-as-tagger.
 
+    # Escape / dodge counters: a "no-life-loss while pursued" round counts as
+    # an escape for the pursuer (their target slipped) and a dodge for the
+    # target. Walk rounds again with reconstructed pre-round lives.
+    escapes_made = defaultdict(int)   # pursuer -> count (target escaped them)
+    dodges_made  = defaultdict(int)   # target  -> count (dodged their pursuer)
+    escapes_on = defaultdict(lambda: defaultdict(int))   # pursuer -> {target: count}
+    dodged_by  = defaultdict(lambda: defaultdict(int))   # target  -> {pursuer: count}
+    prev_lives_e = {}
+    for rnd in rounds:
+        for pr in rnd['playerResults']:
+            sid = pr['steamID']
+            cur = pr.get('livesRemaining', lives)
+            prev = prev_lives_e.get(sid, lives)
+            pursuer_sid = pr.get('targetedBySteamID')
+            if prev > 0 and cur >= prev and pursuer_sid is not None:
+                dodges_made[sid] += 1
+                escapes_made[pursuer_sid] += 1
+                dodged_by[sid][pursuer_sid] += 1
+                escapes_on[pursuer_sid][sid] += 1
+        for pr in rnd['playerResults']:
+            prev_lives_e[pr['steamID']] = pr.get('livesRemaining', lives)
+
     # Maps array
     maps_arr = []
     seen_uids = set()
@@ -265,6 +287,8 @@ def build_cup(event, date, data):
             'tags_made': tags_made[sid],
             'tagged_by': tagged_by[sid],
             'eliminations_made': elims_made[sid],
+            'escapes_made': escapes_made[sid],
+            'dodges_made': dodges_made[sid],
             'eliminated_by_steamid': str(eliminated_by[sid]) if sid in eliminated_by else None,
         })
     results.sort(key=lambda r: (r['placement'], r['name'].lower()))
@@ -310,6 +334,8 @@ def build_cup(event, date, data):
         'tags_received_from': {k: dict(v) for k, v in tags_received_from.items()},
         'elims_on': {k: dict(v) for k, v in elims_on.items()},
         'elimd_by': {k: dict(v) for k, v in elimd_by.items()},
+        'escapes_on': {k: dict(v) for k, v in escapes_on.items()},
+        'dodged_by': {k: dict(v) for k, v in dodged_by.items()},
         'observed_names': dict(observed_names),
         'placements': placements,
         'rounds_played': dict(rounds_played),
@@ -347,6 +373,8 @@ def build_players(cups_real):
         'tagged_by': defaultdict(int),
         'elims_on': defaultdict(int),
         'elimd_by': defaultdict(int),
+        'escapes_on': defaultdict(int),
+        'dodged_by': defaultdict(int),
     })
 
     # First pass: collect all observed names per sid
@@ -373,6 +401,8 @@ def build_players(cups_real):
             'tagged_by_total': 0,
             'eliminations_made_total': 0,
             'times_eliminated_total': 0,
+            'escapes_total': 0,    # times my targets escaped me
+            'dodges_total': 0,     # times I dodged my pursuer
             'history': [],
         }
 
@@ -398,6 +428,8 @@ def build_players(cups_real):
             p['tags_made_total'] += r['tags_made']
             p['tagged_by_total'] += r['tagged_by']
             p['eliminations_made_total'] += r['eliminations_made']
+            p['escapes_total'] += r.get('escapes_made', 0)
+            p['dodges_total'] += r.get('dodges_made', 0)
             if r['elim_round'] is not None:
                 p['times_eliminated_total'] += 1
             pts = cup_points(placement)
@@ -420,16 +452,22 @@ def build_players(cups_real):
             for victim_sid, cnt in vmap.items():
                 tag_matrix[tagger_sid]['elims_on'][victim_sid] += cnt
                 tag_matrix[victim_sid]['elimd_by'][tagger_sid] += cnt
+        for pursuer_sid, tmap in intr.get('escapes_on', {}).items():
+            for target_sid, cnt in tmap.items():
+                tag_matrix[pursuer_sid]['escapes_on'][target_sid] += cnt
+                tag_matrix[target_sid]['dodged_by'][pursuer_sid] += cnt
 
     # Attach tag_matrix and finalize
     out = []
     for sid, p in by_sid.items():
         m = tag_matrix.get(sid, {})
         p['tag_matrix'] = {
-            'tags_on':   {str(k): v for k, v in dict(m.get('tags_on', {})).items()},
-            'tagged_by': {str(k): v for k, v in dict(m.get('tagged_by', {})).items()},
-            'elims_on':  {str(k): v for k, v in dict(m.get('elims_on', {})).items()},
-            'elimd_by':  {str(k): v for k, v in dict(m.get('elimd_by', {})).items()},
+            'tags_on':    {str(k): v for k, v in dict(m.get('tags_on', {})).items()},
+            'tagged_by':  {str(k): v for k, v in dict(m.get('tagged_by', {})).items()},
+            'elims_on':   {str(k): v for k, v in dict(m.get('elims_on', {})).items()},
+            'elimd_by':   {str(k): v for k, v in dict(m.get('elimd_by', {})).items()},
+            'escapes_on': {str(k): v for k, v in dict(m.get('escapes_on', {})).items()},
+            'dodged_by':  {str(k): v for k, v in dict(m.get('dodged_by', {})).items()},
         }
         out.append(p)
 

@@ -658,7 +658,7 @@ function renderRankDetail(r) {
         <span><span class="rd-label">Career</span> ${p.cups_attended} cups</span>
         <span><span class="rd-label">Wins</span> <strong style="color:var(--gold)">${p.cups_won}</strong></span>
         <span><span class="rd-label">G/S/B</span> ${pod.gold}/${pod.silver}/${pod.bronze}</span>
-        <span><span class="rd-label">Tags</span> ${p.tags_made_total}</span>
+        <span><span class="rd-label">Tags</span> ${p.tags_made_total + p.eliminations_made_total}</span>
         <span><span class="rd-label">Elims</span> ${p.eliminations_made_total}</span>
         <span><span class="rd-label">Eliminated</span> ${p.times_eliminated_total}×</span>
       </div>
@@ -1167,7 +1167,7 @@ function renderCupDetail(cup) {
         <div class="player">
           <span class="pname ${pl===1?'gold-name':pl===2?'silver-name':pl===3?'bronze-name':''}">${escapeHtml(r.name)}</span>
         </div>
-        <div style="text-align:right;font-family:var(--mono)">${r.tags_made}</div>
+        <div style="text-align:right;font-family:var(--mono)">${r.tags_made + r.eliminations_made}</div>
         <div style="text-align:right;font-family:var(--mono)">${r.eliminations_made}</div>
         <div style="text-align:right;font-family:var(--mono);color:var(--text-dim)">${cup.lives - r.lives_lost}/${cup.lives}</div>
         <div style="text-align:right;font-family:var(--mono);color:var(--text-muted)">${r.elim_round === null ? '—' : 'R'+r.elim_round}</div>
@@ -1208,18 +1208,22 @@ function renderPlayerInfo(ctrl) {
       <div class="stat"><span class="label">Cups</span><span class="value">${p.cups_attended}</span></div>
       <div class="stat"><span class="label">Wins</span><span class="value" style="color:var(--gold)">${p.cups_won}</span></div>
       <div class="stat"><span class="label">G/S/B</span><span class="value">${pod.gold}/${pod.silver}/${pod.bronze}</span></div>
-      <div class="stat"><span class="label">Tags made</span><span class="value">${p.tags_made_total}</span></div>
-      <div class="stat"><span class="label">Tagged by</span><span class="value">${p.tagged_by_total}</span></div>
+      <div class="stat"><span class="label">Tags made</span><span class="value">${p.tags_made_total + p.eliminations_made_total}</span></div>
+      <div class="stat"><span class="label">Tagged by</span><span class="value">${p.tagged_by_total + p.times_eliminated_total}</span></div>
       <div class="stat"><span class="label">Eliminations</span><span class="value">${p.eliminations_made_total}</span></div>
       <div class="stat"><span class="label">Times eliminated</span><span class="value">${p.times_eliminated_total}</span></div>
-    </div>
-    <div class="tm-grid">
-      ${matrixPanel('Tags they make (top victims)',     p.tag_matrix.tags_on,   'tags_on',   p.steamid)}
-      ${matrixPanel('Tagged by (top pursuers)',         p.tag_matrix.tagged_by, 'tagged_by', p.steamid)}
-      ${matrixPanel('Eliminations made (kills)',        p.tag_matrix.elims_on,  'elims_on',  p.steamid)}
-      ${matrixPanel('Eliminated by (their killers)',    p.tag_matrix.elimd_by,  'elimd_by',  p.steamid)}
+      <div class="stat" title="Times your target escaped you (you were pursuing, didn't take a life)"><span class="label">Escaped</span><span class="value">${p.escapes_total || 0}</span></div>
+      <div class="stat" title="Times you dodged your pursuer (you were being hunted, didn't lose a life)"><span class="label">Dodged</span><span class="value">${p.dodges_total || 0}</span></div>
     </div>
     ${renderPlayerInfoChart(p)}
+    <div class="tm-grid">
+      ${matrixPanel('Tags they make (top victims)',     mergeCounts(p.tag_matrix.tags_on, p.tag_matrix.elims_on),   'tags_on',   p.steamid)}
+      ${matrixPanel('Tagged by (top pursuers)',         mergeCounts(p.tag_matrix.tagged_by, p.tag_matrix.elimd_by), 'tagged_by', p.steamid)}
+      ${matrixPanel('Eliminations made (top victims)',  p.tag_matrix.elims_on,  'elims_on',  p.steamid)}
+      ${matrixPanel('Eliminated by (top pursuers)',     p.tag_matrix.elimd_by,  'elimd_by',  p.steamid)}
+      ${matrixPanel('Targets that escaped (top slippery)', p.tag_matrix.escapes_on || {}, 'escapes_on', p.steamid)}
+      ${matrixPanel('Dodged pursuers (top times slipped)', p.tag_matrix.dodged_by || {},  'dodged_by',  p.steamid)}
+    </div>
   `;
 }
 
@@ -1290,6 +1294,13 @@ function updateSuggestions(q) {
       render();
     });
   });
+}
+
+function mergeCounts(a, b) {
+  var out = {};
+  for (var k in (a || {})) out[k] = a[k];
+  for (var k in (b || {})) out[k] = (out[k] || 0) + b[k];
+  return out;
 }
 
 function matrixPanel(title, sparseMap, panelType, focalSid) {
@@ -1450,10 +1461,10 @@ function renderPlayerEventDetail(cup, pResult) {
   if (pResult.elim_round === null) {
     elimLine = pResult.placement === 1 ? '🏆 Survived (winner)' : 'Survived';
   } else {
-    var killer = pResult.eliminated_by_steamid
+    var eliminator = pResult.eliminated_by_steamid
       ? escapeHtml(SID2NAME[pResult.eliminated_by_steamid] || '?')
       : '?';
-    elimLine = `Out R${pResult.elim_round} by ${killer}`;
+    elimLine = `Out R${pResult.elim_round} by ${eliminator}`;
   }
 
   return `
@@ -1463,7 +1474,7 @@ function renderPlayerEventDetail(cup, pResult) {
         <div class="pdr-title">${escapeHtml(pResult.name)} — Event #${cup.event}</div>
         <div class="pdr-sub">
           ${ordinal(pResult.placement)} place · ${elimLine}
-          · ${pResult.tags_made}t / ${pResult.eliminations_made}e ·
+          · ${pResult.tags_made + pResult.eliminations_made}t / ${pResult.eliminations_made}e ·
           ${cup.lives - pResult.lives_lost}/${cup.lives} lives
         </div>
         ${entries.map(e => `
@@ -1508,10 +1519,12 @@ function findInteractions(focalSid, otherSid, panelType) {
         var oLost = other.lives < prevO;
         var matched = false;
 
-        if (panelType === 'tags_on'   && focal.tgt === otherSid && oLost && other.lives > 0)  matched = true;
-        if (panelType === 'elims_on'  && focal.tgt === otherSid && oLost && other.lives === 0) matched = true;
-        if (panelType === 'tagged_by' && focal.pur === otherSid && fLost && focal.lives > 0)  matched = true;
-        if (panelType === 'elimd_by'  && focal.pur === otherSid && fLost && focal.lives === 0) matched = true;
+        if (panelType === 'tags_on'    && focal.tgt === otherSid && prevO > 0) matched = true;
+        if (panelType === 'elims_on'   && focal.tgt === otherSid && oLost && other.lives === 0) matched = true;
+        if (panelType === 'tagged_by'  && focal.pur === otherSid && prevF > 0) matched = true;
+        if (panelType === 'elimd_by'   && focal.pur === otherSid && fLost && focal.lives === 0) matched = true;
+        if (panelType === 'escapes_on' && focal.tgt === otherSid && !oLost && prevO > 0) matched = true;
+        if (panelType === 'dodged_by'  && focal.pur === otherSid && !fLost && prevF > 0) matched = true;
 
         if (matched) {
           instances.push({
@@ -1519,6 +1532,7 @@ function findInteractions(focalSid, otherSid, panelType) {
             rounds_total: cup.rounds_total,
             focalTime: focal.time, otherTime: other.time,
             focalLivesAfter: focal.lives, otherLivesAfter: other.lives,
+            fLost: fLost, oLost: oLost,
             cupLives: cup.lives,
           });
         }
@@ -1539,10 +1553,12 @@ function renderInteractionList(focalSid, otherSid, panelType, instances) {
   var focalName = SID2NAME[focalSid] || '?';
   var otherName = SID2NAME[otherSid] || '?';
   var titleByPanel = {
-    'tags_on':   `${focalName} → ${otherName}: tags`,
-    'elims_on':  `${focalName} eliminated ${otherName}`,
-    'tagged_by': `${otherName} → ${focalName}: tags (against you)`,
-    'elimd_by':  `${otherName} eliminated ${focalName}`,
+    'tags_on':    `${focalName} → ${otherName}: H2H as pursuer`,
+    'elims_on':   `${focalName} eliminated ${otherName}`,
+    'tagged_by':  `${otherName} → ${focalName}: H2H as pursuer`,
+    'elimd_by':   `${otherName} eliminated ${focalName}`,
+    'escapes_on': `${otherName} escaped ${focalName}`,
+    'dodged_by':  `${focalName} dodged ${otherName}`,
   };
 
   function fmtTime(t) {
@@ -1565,7 +1581,7 @@ function renderInteractionList(focalSid, otherSid, panelType, instances) {
 
   // Pursuer (winning) green, victim (losing) red. Outcome implicit from panel title.
   function timeLine(inst) {
-    var focalIsPursuer = (panelType === 'tags_on' || panelType === 'elims_on');
+    var focalIsPursuer = (panelType === 'tags_on' || panelType === 'elims_on' || panelType === 'escapes_on');
     var pursuerName = focalIsPursuer ? focalName : otherName;
     var pursuerTime = focalIsPursuer ? inst.focalTime : inst.otherTime;
     var victimName  = focalIsPursuer ? otherName : focalName;
@@ -1592,13 +1608,20 @@ function renderInteractionList(focalSid, otherSid, panelType, instances) {
               <span class="my-time" style="color:var(--accent)">${g.items.length}×</span>
             </div>
             ${g.items.map(inst => {
-              var focalIsPursuer = (panelType === 'tags_on' || panelType === 'elims_on');
+              var focalIsPursuer = (panelType === 'tags_on' || panelType === 'elims_on' || panelType === 'escapes_on');
               var victimLivesAfter = focalIsPursuer ? inst.otherLivesAfter : inst.focalLivesAfter;
+              var victimLostThis = focalIsPursuer ? inst.oLost : inst.fLost;
+              // outcome marker: hearts for life-loss rounds, ESCAPED/DODGED badge otherwise
+              var outcome = victimLostThis
+                ? heartsFor(victimLivesAfter, inst.cupLives)
+                : (focalIsPursuer
+                    ? '<span class="out-bad">ESCAPED</span>'
+                    : '<span class="out-good">DODGED</span>');
               return `
               <div class="pdr-line" style="flex-wrap:wrap">
                 <span class="arrow" style="color:var(--accent)">R${inst.round}${inst.round === inst.rounds_total - 1 ? '*' : ''}</span>
                 <span class="who"><span style="color:var(--text)">${escapeHtml(inst.map)}</span> <span style="color:var(--text-muted)">·</span> ${timeLine(inst)}</span>
-                <span style="margin-left:8px">${heartsFor(victimLivesAfter, inst.cupLives)}</span>
+                <span style="margin-left:8px">${outcome}</span>
               </div>`;
             }).join('')}
           </div>
