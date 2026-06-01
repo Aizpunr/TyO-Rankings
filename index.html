@@ -276,6 +276,10 @@ body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; p
 .mx-sugg-meta { color: var(--text-muted); font-family: var(--mono); font-size: 10px; }
 .mx-sugg-empty { padding: 10px; color: var(--text-muted); font-family: var(--mono); font-size: 11px; text-align: center; }
 
+.vs-agg { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+.vs-agg .k { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+  font-size: 10px; margin-right: 3px; }
+
 /* Player-event drilldown overlay (click a player inside cup detail) */
 .pdr-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
@@ -429,6 +433,7 @@ let rankingSort = { col: 'points', dir: -1 }; // re-init when switching ranking 
 let eventSort = { col: 'event', dir: -1 };    // newest first
 let eventExpanded = null;                     // event# currently open
 let matrixSelected = null;
+let matrixVs = null;                           // head-to-head opponent sid (Player Info "vs" box)
 function rankMode() { return view === 'alltime' ? 'elo' : 'placement'; }
 
 // ── Load + dispatch ───────────────────────────────────────────────────
@@ -1179,24 +1184,49 @@ function renderCupDetail(cup) {
 
 // ── Player Info view (was Tag Matrix) ─────────────────────────────────
 function renderPlayerInfo(ctrl) {
-  ctrl.innerHTML = `
-    <div class="mx-search-wrap" style="position:relative;flex:0 1 280px;">
-      <input type="text" class="search-input" id="mxSearch" placeholder="Type your name..." style="width:100%;" autocomplete="off">
-      <div id="mxSugg" class="mx-suggestions"></div>
-    </div>`;
-  setTimeout(() => {
-    var inp = document.getElementById('mxSearch');
-    if (!inp) return;
-    inp.addEventListener('input', e => updateSuggestions(e.target.value));
-    inp.addEventListener('focus', () => updateSuggestions(inp.value));
-    inp.addEventListener('blur', () => setTimeout(() => {
-      var s = document.getElementById('mxSugg'); if (s) s.style.display = 'none';
-    }, 150));
-  }, 0);
   var p = DATA.players.find(x => x.steamid === matrixSelected);
   if (!p) {
     p = DATA.players.slice().sort((a,b)=>(b.cups_won-a.cups_won)||(b.cups_attended-a.cups_attended))[0];
   }
+  // Resolve the vs opponent (guard against self-vs).
+  var vs = (matrixVs && matrixVs !== (p && p.steamid)) ? DATA.players.find(x => x.steamid === matrixVs) : null;
+  if (!vs) matrixVs = null;
+  ctrl.innerHTML = `
+    <div style="display:flex;flex-wrap:nowrap;gap:8px;align-items:center">
+      <div class="mx-search-wrap" style="position:relative;flex:1 1 0;min-width:0;">
+        <input type="text" class="search-input" id="mxSearch" placeholder="Type your name..." style="width:100%;" autocomplete="off">
+        <div id="mxSugg" class="mx-suggestions"></div>
+      </div>
+      <span style="color:var(--text-muted);font-family:var(--mono);font-size:12px;flex:0 0 auto">vs</span>
+      <div class="mx-search-wrap" style="position:relative;flex:1 1 0;min-width:0;">
+        <input type="text" class="search-input" id="mxVsSearch" placeholder="Type an opponent…" value="${vs ? escapeHtml(vs.name) : ''}" style="width:100%;" autocomplete="off">
+        <div id="mxVsSugg" class="mx-suggestions"></div>
+      </div>
+      ${vs ? `<button id="mxVsClear" class="search-input" style="flex:0 0 auto;cursor:pointer;width:auto;padding:6px 10px" title="Clear opponent">× clear</button>` : ''}
+    </div>`;
+  setTimeout(() => {
+    var inp = document.getElementById('mxSearch');
+    if (inp) {
+      inp.addEventListener('input', e => updateSuggestions(e.target.value));
+      inp.addEventListener('focus', () => updateSuggestions(inp.value));
+      inp.addEventListener('blur', () => setTimeout(() => {
+        var s = document.getElementById('mxSugg'); if (s) s.style.display = 'none';
+      }, 150));
+    }
+    var vinp = document.getElementById('mxVsSearch');
+    if (vinp) {
+      var met = metOpponents(p);
+      var vsFilter = x => x.steamid !== p.steamid && met[x.steamid];
+      var vsPick = sid => { matrixVs = sid; };
+      vinp.addEventListener('input', e => updateSuggestions(e.target.value, 'mxVsSugg', vsPick, vsFilter));
+      vinp.addEventListener('focus', () => updateSuggestions(vinp.value, 'mxVsSugg', vsPick, vsFilter));
+      vinp.addEventListener('blur', () => setTimeout(() => {
+        var s = document.getElementById('mxVsSugg'); if (s) s.style.display = 'none';
+      }, 150));
+    }
+    var clr = document.getElementById('mxVsClear');
+    if (clr) clr.addEventListener('click', () => { matrixVs = null; render(); });
+  }, 0);
   if (!p) return '<div style="color:var(--text-muted);font-family:var(--mono);padding:30px;text-align:center">No player data.</div>';
   var pod = p.podiums;
   return `
@@ -1216,15 +1246,63 @@ function renderPlayerInfo(ctrl) {
       <div class="stat" title="Times you dodged your pursuer (you were being hunted, didn't lose a life)"><span class="label">Dodged</span><span class="value">${p.dodges_total || 0}</span></div>
     </div>
     ${renderPlayerInfoChart(p)}
+    ${vs ? renderVsHeader(p, vs) : ''}
     <div class="tm-grid">
-      ${matrixPanel('Tags they make (top victims)',     mergeCounts(p.tag_matrix.tags_on, p.tag_matrix.elims_on),   'tags_on',   p.steamid)}
-      ${matrixPanel('Tagged by (top pursuers)',         mergeCounts(p.tag_matrix.tagged_by, p.tag_matrix.elimd_by), 'tagged_by', p.steamid)}
-      ${matrixPanel('Eliminations made (top victims)',  p.tag_matrix.elims_on,  'elims_on',  p.steamid)}
-      ${matrixPanel('Eliminated by (top pursuers)',     p.tag_matrix.elimd_by,  'elimd_by',  p.steamid)}
-      ${matrixPanel('Targets that escaped (top slippery)', p.tag_matrix.escapes_on || {}, 'escapes_on', p.steamid)}
-      ${matrixPanel('Dodged pursuers (top times slipped)', p.tag_matrix.dodged_by || {},  'dodged_by',  p.steamid)}
+      ${playerInfoCards(p).map(c => {
+        if (matrixVs) {
+          var m = {}; m[matrixVs] = c.map[matrixVs] || 0;
+          return matrixPanel(c.title, m, c.type, p.steamid);
+        }
+        return matrixPanel(c.title, c.map, c.type, p.steamid);
+      }).join('')}
     </div>
   `;
+}
+
+// The six Player Info card definitions (shared by normal + vs modes).
+function playerInfoCards(p) {
+  var tm = p.tag_matrix || {};
+  return [
+    { title: 'Tags they make (top victims)',        map: mergeCounts(tm.tags_on, tm.elims_on),    type: 'tags_on'    },
+    { title: 'Tagged by (top pursuers)',            map: mergeCounts(tm.tagged_by, tm.elimd_by),  type: 'tagged_by'  },
+    { title: 'Eliminations made (top victims)',     map: tm.elims_on  || {},                      type: 'elims_on'   },
+    { title: 'Eliminated by (top pursuers)',        map: tm.elimd_by  || {},                      type: 'elimd_by'   },
+    { title: 'Targets that escaped (top slippery)', map: tm.escapes_on || {},                     type: 'escapes_on' },
+    { title: 'Dodged pursuers (top times slipped)', map: tm.dodged_by  || {},                     type: 'dodged_by'  },
+  ];
+}
+
+// Step 2 — compact head-to-head aggregation header (focal vs opponent).
+function renderVsHeader(p, vs) {
+  var fm = p.tag_matrix || {}, om = vs.tag_matrix || {};
+  function at(map, sid) { return (map && map[sid]) || 0; }
+  // focal→opp = focal's maps at opp's sid; opp→focal = opp's maps at focal's sid.
+  var tagsF = at(fm.tags_on, vs.steamid) + at(fm.elims_on, vs.steamid);
+  var tagsO = at(om.tags_on, p.steamid)  + at(om.elims_on, p.steamid);
+  var elimF = at(fm.elims_on, vs.steamid);
+  var elimO = at(om.elims_on, p.steamid);
+  var escF  = at(fm.escapes_on, vs.steamid);   // opp escaped focal (focal was pursuer)
+  var dodF  = at(fm.dodged_by, vs.steamid);    // focal dodged opp (opp was pursuer)
+  // Rounds the two shared (single pass over cups with round detail).
+  var rounds = 0, cupsSet = {};
+  DATA.cups.forEach(cup => {
+    if (cup.stub || !cup.rounds) return;
+    cup.rounds.forEach(rnd => {
+      var a = rnd.players.some(x => x.sid === p.steamid);
+      var b = rnd.players.some(x => x.sid === vs.steamid);
+      if (a && b) { rounds++; cupsSet[cup.event] = true; }
+    });
+  });
+  var cups = Object.keys(cupsSet).length;
+  return `
+    <div class="cup-meta" style="margin-top:18px;flex-wrap:wrap;gap:6px 14px">
+      <strong>${escapeHtml(p.name)} <span style="color:var(--text-muted)">vs</span> ${escapeHtml(vs.name)}</strong>
+      <span class="vs-agg"><span class="k">tags</span> ${tagsF}–${tagsO}</span>
+      <span class="vs-agg"><span class="k">elims</span> ${elimF}–${elimO}</span>
+      <span class="vs-agg"><span class="k">they escaped</span> ${escF}</span>
+      <span class="vs-agg"><span class="k">you dodged</span> ${dodF}</span>
+      <span class="vs-agg"><span class="k">met</span> ${rounds} rnd${rounds === 1 ? '' : 's'} · ${cups} cup${cups === 1 ? '' : 's'}</span>
+    </div>`;
 }
 
 function renderPlayerInfoChart(p) {
@@ -1250,11 +1328,14 @@ function renderPlayerInfoChart(p) {
     </div>
   `;
 }
-function updateSuggestions(q) {
-  var box = document.getElementById('mxSugg');
+function updateSuggestions(q, suggId, onPick, poolFilter) {
+  suggId = suggId || 'mxSugg';
+  onPick = onPick || function (sid) { matrixSelected = sid; };
+  var box = document.getElementById(suggId);
   if (!box) return;
   var query = (q || '').toLowerCase().trim();
   var pool = DATA.players.slice();
+  if (poolFilter) pool = pool.filter(poolFilter);
   var matches;
   if (!query) {
     matches = pool.sort((a,b)=>(b.cups_won-a.cups_won)||(b.cups_attended-a.cups_attended)).slice(0, 10);
@@ -1289,11 +1370,21 @@ function updateSuggestions(q) {
   box.querySelectorAll('.mx-sugg-row').forEach(row => {
     row.addEventListener('mousedown', e => {
       e.preventDefault();
-      matrixSelected = row.dataset.sid;
+      onPick(row.dataset.sid);
       box.style.display = 'none';
       render();
     });
   });
+}
+
+// Sids the focal player has actually interacted with (any of the 6 tag-matrix maps).
+function metOpponents(p) {
+  var tm = p.tag_matrix || {};
+  var set = {};
+  ['tags_on','tagged_by','elims_on','elimd_by','escapes_on','dodged_by'].forEach(k => {
+    for (var sid in (tm[k] || {})) set[sid] = true;
+  });
+  return set;
 }
 
 function mergeCounts(a, b) {
