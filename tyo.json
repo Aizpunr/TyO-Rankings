@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated": "2026-06-20T21:02:42Z",
+    "generated": "2026-06-20T21:12:00Z",
     "total_cups": 25,
     "stub_cups": 2,
     "total_players": 193,
@@ -58442,7 +58442,8 @@
             }
           ]
         }
-      ]
+      ],
+      "sof": 89.33
     }
   ],
   "players": [
