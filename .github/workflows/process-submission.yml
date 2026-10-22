@@ -1,0 +1,98 @@
+name: Process submitted cups
+
+# Polls the tyo-submit Worker for cups sent from submit.html. A clean cup is
+# committed straight to main (live); a cup with review flags becomes a pull
+# request on branch tyo-<N>, and merging it publishes the cup.
+# See tyo_submissions_poll.py and submit-worker/README.md.
+
+on:
+  schedule:
+    # TyO runs after COTD on Saturday evening (about 20:00 to 21:00 Spain
+    # time = 18:00 to 19:00 UTC in summer, 19:00 to 20:00 UTC in winter).
+    - cron: '*/15 18-23 * * 6'
+    - cron: '*/15 0-11 * * 0'
+  push:
+    # A merged cup pull request changes tyo.json: mark its submission published.
+    branches: [main]
+    paths: [tyo.json]
+  workflow_dispatch:
+    inputs:
+      id:
+        description: 'Only this submission id (optional)'
+        required: false
+      dry_run:
+        description: 'Dry run: decide and log, change nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+
+concurrency:
+  group: submissions
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONIOENCODING: utf-8
+      TYO_WORKER_URL: ${{ secrets.TYO_WORKER_URL }}
+      TYO_POLLER_TOKEN: ${{ secrets.TYO_POLLER_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: TyO
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # build_tyo.py reads two sibling folders, exactly as on the PC:
+      #   ../zeepkist cotd elo/elo_engine.py   (CANONICAL aliases)
+      #   ../zeepkist holistic/allcompdata.json (cross-comp SOF per cup)
+      # Missing either would silently drop every alias or every SOF value,
+      # so curl -f fails the run instead.
+      - name: Fetch sibling inputs
+        run: |
+          mkdir -p "zeepkist cotd elo" "zeepkist holistic"
+          curl -fsSL -o "zeepkist cotd elo/elo_engine.py" https://raw.githubusercontent.com/Aizpunr/Zeepkist-COTD-Elo-Rankings/main/elo_engine.py
+          curl -fsSL -o "zeepkist cotd elo/players.json" https://raw.githubusercontent.com/Aizpunr/Zeepkist-COTD-Elo-Rankings/main/players.json
+          curl -fsSL -o "zeepkist holistic/allcompdata.json" https://raw.githubusercontent.com/Aizpunr/Zeepkist-Strength-of-Field/main/docs/allcompdata.json
+          python -c "import json; json.load(open('zeepkist holistic/allcompdata.json', encoding='utf-8'))"
+          python -c "import sys; sys.path.insert(0, 'TyO'); import tyo_aliases as t; assert t.CANONICAL, 'CANONICAL is empty'; print(len(t.CANONICAL), 'canonical names')"
+
+      - name: Install
+        run: python -m pip install --quiet certifi pytest
+
+      - name: Tests
+        working-directory: TyO
+        run: python -m pytest tests -q
+
+      - name: Poll and process
+        working-directory: TyO
+        env:
+          ONLY_ID: ${{ inputs.id }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          args=(--once --ci -v)
+          if [ -n "$ONLY_ID" ]; then args+=(--id "$ONLY_ID"); fi
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          python tyo_submissions_poll.py "${args[@]}"
+
+      # process_tyo.py's output only, never the submitted files themselves.
+      - name: Keep the run's logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: submissions-${{ github.run_id }}
+          path: TyO/submissions/*.out
+          if-no-files-found: ignore
+          retention-days: 30

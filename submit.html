@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit a Cup - Tag You're Out</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script>(function(){ var t = 'dark'; try { t = localStorage.getItem('theme') || 'dark'; } catch (e) {} document.documentElement.setAttribute('data-theme', t); })();</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --green: #10b981; --red: #ef4444; --blue: #3b82f6; --mono: 'JetBrains Mono', monospace; }
+  [data-theme="dark"] {
+    --accent: #f59e0b; --accent-bg: rgba(245,158,11,0.15); --accent-soft: rgba(245,158,11,0.06);
+    --bg: #08080d; --surface: rgba(255,255,255,0.02); --border: rgba(255,255,255,0.06);
+    --border-bright: rgba(255,255,255,0.08); --text: #e5e7eb; --text-dim: #9ca3af;
+    --text-muted: #6b7280; --text-dark: #4b5563;
+    --surface-hover: rgba(255,255,255,0.05); --row-hover: rgba(255,255,255,0.03);
+    --btn-border-hover: rgba(255,255,255,0.3); --row-border: rgba(255,255,255,0.03); --pname: #f3f4f6;
+    --scrollbar: rgba(255,255,255,0.1);
+  }
+  [data-theme="light"] {
+    --accent: #b45309; --accent-bg: rgba(180,83,9,0.12); --accent-soft: rgba(180,83,9,0.05);
+    --bg: #f5f5f7; --surface: rgba(0,0,0,0.02); --border: rgba(0,0,0,0.08);
+    --border-bright: rgba(0,0,0,0.12); --text: #1f2937; --text-dim: #4b5563;
+    --text-muted: #6b7280; --text-dark: #9ca3af;
+    --surface-hover: rgba(0,0,0,0.05); --row-hover: rgba(0,0,0,0.03);
+    --btn-border-hover: rgba(0,0,0,0.3); --row-border: rgba(0,0,0,0.05); --pname: #111827;
+    --scrollbar: rgba(0,0,0,0.15);
+  }
+  html { background: var(--bg); color: var(--text); }
+  body { font-family: 'Space Grotesk', system-ui, sans-serif; min-height: 100vh; padding: 20px 16px; background: var(--bg); }
+  ::selection { background: var(--accent-bg); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+  .container { max-width: 900px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 20px; position: relative; }
+  .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--accent); }
+  .header .sub { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .back-link { font-family: var(--mono); font-size: 11px; color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+  .back-link:hover { color: var(--accent); }
+  .top-link { display: inline-block; margin-bottom: 14px; }
+  .theme-toggle {
+    position: absolute; top: 0; right: 0;
+    background: var(--surface-hover); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 10px; cursor: pointer;
+    font-size: 16px; line-height: 1; transition: border-color 0.15s;
+  }
+  .theme-toggle:hover { border-color: var(--btn-border-hover); }
+
+  .section { margin-bottom: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 12px; font-family: var(--mono); display: flex; align-items: center; gap: 8px; }
+  .step { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: 11px; }
+  .help { font-size: 13px; color: var(--text-dim); line-height: 1.55; }
+  .help code { font-family: var(--mono); font-size: 11.5px; background: var(--surface-hover); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+  .help ul { margin: 8px 0 0 18px; }
+  .help li { margin-bottom: 4px; }
+
+  .dropzone {
+    display: block; border: 2px dashed var(--border-bright); border-radius: 10px;
+    padding: 28px 16px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .dropzone:hover, .dropzone.over { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone .big { font-size: 15px; font-weight: 700; }
+  .dropzone .small { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .dropzone input { display: none; }
+  .file-info { margin-top: 10px; font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); }
+
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 16px; }
+  .field label { display: block; font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+  .field .hint { font-family: var(--mono); font-size: 10.5px; color: var(--text-dark); margin-top: 4px; }
+  .input {
+    width: 100%; background: var(--surface-hover); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none;
+    transition: border-color 0.15s; min-height: 38px;
+  }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--text-dark); }
+  .input.invalid { border-color: var(--red); }
+
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kv div { background: var(--surface-hover); border-radius: 8px; padding: 10px 12px; }
+  .kv .k { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kv .v { font-size: 16px; font-weight: 700; margin-top: 3px; word-break: break-word; }
+  .podium { list-style: none; margin-bottom: 12px; }
+  .podium li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--row-border); font-family: var(--mono); font-size: 13px; }
+  .podium .pos { width: 26px; color: var(--accent); font-weight: 700; }
+  .podium .nm { flex: 1; color: var(--pname); font-weight: 600; word-break: break-word; }
+  .podium .tm { color: var(--text-dim); }
+  .maps { font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.6; }
+  .msg { font-family: var(--mono); font-size: 12px; line-height: 1.5; padding: 8px 12px; border-radius: 8px; margin-top: 8px; }
+  .msg.warn { background: var(--accent-bg); color: var(--accent); }
+  .msg.err { background: rgba(239,68,68,0.10); color: var(--red); }
+  .msg.ok { background: rgba(16,185,129,0.10); color: var(--green); }
+  .msg.note { background: var(--surface-hover); color: var(--text-muted); }
+  details.full { margin-top: 12px; }
+  details.full summary { cursor: pointer; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+  table.lb { width: 100%; border-collapse: collapse; margin-top: 8px; font-family: var(--mono); font-size: 12px; }
+  table.lb th { text-align: left; font-size: 10px; color: var(--text-muted); text-transform: uppercase; padding: 5px 6px; border-bottom: 1px solid var(--border-bright); }
+  table.lb td { padding: 5px 6px; border-bottom: 1px solid var(--row-border); word-break: break-word; }
+  table.lb td.num { text-align: right; color: var(--text-dim); white-space: nowrap; }
+
+  .submit-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+  .btn {
+    min-height: 40px; padding: 8px 20px; border-radius: 8px; border: 1px solid var(--accent);
+    background: var(--accent-bg); color: var(--accent); font-family: var(--mono); font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.small { min-height: 30px; padding: 4px 12px; font-size: 11px; border-color: var(--border); background: transparent; color: var(--text-muted); }
+  .missing { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+
+  .status-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  .status-table th { text-align: left; font-size: 10px; color: var(--text-muted); text-transform: uppercase; padding: 6px; border-bottom: 1px solid var(--border-bright); }
+  .status-table td { padding: 7px 6px; border-bottom: 1px solid var(--row-border); vertical-align: top; word-break: break-word; }
+  .status-table tr.mine td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+  .pill.received { background: rgba(107,114,128,0.2); color: var(--text-dim); }
+  .pill.processed { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .pill.published { background: rgba(16,185,129,0.15); color: var(--green); }
+  .pill.failed { background: rgba(239,68,68,0.15); color: var(--red); }
+  .pill.duplicate, .pill.superseded { background: var(--surface-hover); color: var(--text-muted); }
+  .legend { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; margin-top: 12px; font-size: 12px; color: var(--text-dim); align-items: baseline; }
+  .empty { padding: 18px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--text-dark); }
+  .footer { margin-top: 24px; text-align: center; }
+
+  @media (max-width: 640px) {
+    .grid3 { grid-template-columns: 1fr; }
+    .input { font-size: 16px; }
+    .status-table .hide-sm { display: none; }
+    .header h1 { padding: 0 44px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <a class="back-link top-link" href="index.html">&larr; back to the leaderboard</a>
+  <div class="header">
+    <h1>Submit <span>a cup</span></h1>
+    <div class="sub">add a Tag You're Out cup from the Top->Out results file</div>
+    <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode"></button>
+  </div>
+
+  <div id="closedNotice" class="msg warn" style="display:none; margin-bottom:16px"></div>
+
+  <div class="section">
+    <div class="help">
+      Hosted a cup? The Top->Out mod saved its results on your PC. Drop that file below, check the result and send it.
+      A few minutes later the cup is on the leaderboard.
+      <ul>
+        <li>The file is <code>%APPDATA%\Zeepkist\Mods\TopOutTournament\topoutresults_bckp.json</code> (paste that path into the Explorer address bar).</li>
+        <li>Send it right after the cup: the mod replaces the file when your next Top->Out event ends.</li>
+        <li>The file is read here in your browser first. Nothing is uploaded until you press Submit.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="step">1</span> Results file</div>
+    <label class="dropzone" id="dropzone" for="fileInput">
+      <div class="big">Drop topoutresults_bckp.json here</div>
+      <div class="small">or click to pick the file</div>
+      <input type="file" id="fileInput" accept=".json,application/json">
+    </label>
+    <div class="file-info" id="fileInfo"></div>
+    <div id="fileMsg"></div>
+  </div>
+
+  <div class="section" id="previewSection" style="display:none">
+    <div class="section-title"><span class="step">2</span> Check the result</div>
+    <div id="preview"></div>
+  </div>
+
+  <div class="section" id="detailsSection" style="display:none">
+    <div class="section-title"><span class="step">3</span> Cup details</div>
+    <div class="grid3">
+      <div class="field">
+        <label for="eventInput">Cup number</label>
+        <input class="input" id="eventInput" type="number" min="58" max="999" inputmode="numeric">
+        <div class="hint" id="eventHint"></div>
+      </div>
+      <div class="field">
+        <label for="dateInput">Date the cup was played</label>
+        <input class="input" id="dateInput" type="date">
+        <div class="hint" id="dateHint"></div>
+      </div>
+      <div class="field">
+        <label for="submitterInput">Your name (optional)</label>
+        <input class="input" id="submitterInput" maxlength="40" placeholder="so aizpun knows who sent it" autocomplete="off">
+      </div>
+    </div>
+    <div id="reviewMsg"></div>
+  </div>
+
+  <div class="section" id="sendSection" style="display:none">
+    <div class="section-title"><span class="step">4</span> Send it</div>
+    <div id="turnstile"></div>
+    <div class="submit-row">
+      <button class="btn" id="submitBtn" disabled>Submit cup</button>
+      <span class="missing" id="missing"></span>
+    </div>
+    <div id="submitMsg"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title" style="justify-content:space-between">
+      <span>Recent submissions</span>
+      <button class="btn small" id="refreshBtn">Refresh</button>
+    </div>
+    <div id="statusBody"><div class="empty">Loading...</div></div>
+    <div class="legend">
+      <span class="pill received">received</span><span>Waiting for the automatic job. It checks every 15 minutes from Saturday evening to Sunday midday (Spain time).</span>
+      <span class="pill published">published</span><span>Live on the leaderboard.</span>
+      <span class="pill processed">processed</span><span>Something looked unusual, so aizpun checks it before it goes live. The note says what.</span>
+      <span class="pill duplicate">duplicate</span><span>That cup is already on the leaderboard, or this exact file was already sent. Every file is kept and checked against the published result.</span>
+      <span class="pill superseded">superseded</span><span>A newer file for the same cup was sent, and that one is used.</span>
+      <span class="pill failed">failed</span><span>It could not be processed. The note says why; ping aizpun.</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a class="back-link" href="index.html">&larr; back to the leaderboard</a>
+  </div>
+</div>
+
+<script src="tyo_preview.js"></script>
+<script>
+// ── Config ──
+// Production Worker URL and Turnstile site key (setup steps in
+// submit-worker/README.md). Localhost always talks to `wrangler dev`
+// with Cloudflare's always-pass Turnstile test key. The site key is the
+// cotd-submit widget's, shared by all the Zeepkist submit pages.
+var PROD_WORKER_URL = 'https://tyo-submit.cotd-submit.workers.dev';
+var PROD_TURNSTILE_SITE_KEY = '0x4AAAAAAFPeGhO9snC2zYTV';
+var TEST_TURNSTILE_SITE_KEY = '1x00000000000000000000AA';
+var MAX_BYTES = 1024 * 1024;
+var MIN_EVENT = 58;
+
+var IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+var WORKER_URL = (new URLSearchParams(location.search).get('worker')) ||
+  (IS_LOCAL ? 'http://127.0.0.1:8787' : PROD_WORKER_URL);
+WORKER_URL = WORKER_URL.replace(/\/+$/, '');
+var SITE_KEY = IS_LOCAL ? TEST_TURNSTILE_SITE_KEY : PROD_TURNSTILE_SITE_KEY;
+var CONFIGURED = WORKER_URL.indexOf('REPLACE_') === -1 && SITE_KEY.indexOf('REPLACE_') === -1;
+
+var TP = window.TyoPreview;
+var state = {
+  file: null, preview: null, blocker: null, last: null, cups: [],
+  token: null, submitting: false, widgetId: null,
+};
+
+// ── Helpers ──
+function $(id) { return document.getElementById(id); }
+function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+function ordinal(n) { return n + (n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'); }
+function isoDate(d) {
+  var m = d.getMonth() + 1, day = d.getDate();
+  return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+function weekday(iso) {
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(iso + 'T12:00:00').getDay()];
+}
+function ago(iso) {
+  var s = (Date.now() - Date.parse(iso)) / 1000;
+  if (!(s >= 0)) return '';
+  if (s < 90) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + ' min ago';
+  if (s < 86400 * 2) return Math.round(s / 3600) + ' h ago';
+  return Math.round(s / 86400) + ' days ago';
+}
+function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+function load(key, dflt) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : dflt; } catch (e) { return dflt; } }
+function msg(cls, html) { return '<div class="msg ' + cls + '">' + html + '</div>'; }
+
+// ── Theme ──
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('theme', t); } catch (e) {}
+  $('themeToggle').textContent = t === 'dark' ? '☀️' : '🌙';
+}
+$('themeToggle').textContent = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? '☀️' : '🌙';
+$('themeToggle').addEventListener('click', function () {
+  setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+// ── Cups already on the site ──
+fetch('tyo.json?v=' + Date.now()).then(function (r) { return r.json(); }).then(function (tyo) {
+  state.cups = (tyo.cups || []).filter(function (c) { return !c.stub; });
+  state.cups.forEach(function (c) { if (!state.last || c.event > state.last.event) state.last = c; });
+  if (state.preview) applyDefaults();
+}).catch(function () { state.cups = []; });
+
+// ── Step 1: read the file ──
+var dz = $('dropzone');
+['dragenter', 'dragover'].forEach(function (ev) {
+  dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(function (ev) {
+  dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove('over'); });
+});
+dz.addEventListener('drop', function (e) {
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+$('fileInput').addEventListener('change', function (e) {
+  if (e.target.files && e.target.files[0]) readFile(e.target.files[0]);
+});
+
+function readFile(file) {
+  $('fileMsg').innerHTML = '';
+  $('submitMsg').innerHTML = '';
+  $('fileInfo').textContent = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
+  if (file.size > MAX_BYTES) {
+    return fail('That file is over 1 MB. A results file is about 100 KB; make sure it is topoutresults_bckp.json.');
+  }
+  file.text().then(function (text) {
+    var data;
+    try { data = TP.parseTyoText(text); } catch (e) { return fail('This is not a results file: ' + (e.message || e)); }
+    var errors = TP.validateShape(data);
+    if (errors.length) return fail(errors[0]);
+    state.file = file;
+    state.preview = TP.previewCup(data);
+    state.uids = data.rounds.map(function (r) { return r.level && r.level.UID; });
+    $('fileInfo').textContent += ' · ' + state.preview.roundsTotal + ' rounds · ' + state.preview.lobbySize + ' players';
+    ['previewSection', 'detailsSection', 'sendSection'].forEach(function (id) { $(id).style.display = ''; });
+    $('dateInput').value = '';
+    $('eventInput').value = '';
+    applyDefaults();
+    renderPreview();
+    renderTurnstile();
+  }, function () { fail('The file could not be read.'); });
+
+  function fail(text) {
+    state.file = null;
+    state.preview = null;
+    $('fileMsg').innerHTML = msg('err', esc(text));
+    ['previewSection', 'detailsSection', 'sendSection'].forEach(function (id) { $(id).style.display = 'none'; });
+  }
+}
+
+// The file is last written when the cup's final round ends, so its time is
+// the cup's date (minus a day if the cup ran past midnight).
+function dateFromFile(file) {
+  var d = new Date(file.lastModified || Date.now());
+  var shown = d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+  return { iso: isoDate(d), shown: shown };
+}
+
+function applyDefaults() {
+  if (!state.file) return;
+  if (!$('dateInput').value) {
+    var fd = dateFromFile(state.file);
+    $('dateInput').value = fd.iso;
+    $('dateHint').textContent = 'From the file (last saved ' + fd.shown + ').';
+  }
+  if (state.last && !$('eventInput').value) $('eventInput').value = state.last.event + 1;
+  $('eventHint').textContent = state.last ? 'Last cup on the site is #' + state.last.event + ' (' + state.last.date + ').' : '';
+  state.blocker = staleCup();
+  renderPreview();
+  refreshSubmit();
+}
+
+// Same maps, winner and lobby as a cup already on the site: the file still
+// holds an earlier cup (it is only replaced when the next event ends).
+function staleCup() {
+  var p = state.preview;
+  if (!p) return null;
+  for (var i = 0; i < state.cups.length; i++) {
+    var c = state.cups[i];
+    var uids = (c.maps || []).map(function (m) { return m.uid; });
+    if (c.winner_steamid === p.winnerSteamid && c.lobby_size === p.lobbySize &&
+        uids.length === state.uids.length && uids.every(function (u, j) { return u === state.uids[j]; })) {
+      return c;
+    }
+  }
+  return null;
+}
+
+// ── Step 2: preview ──
+function renderPreview() {
+  var p = state.preview, out = '';
+  if (!p) return;
+  if (state.blocker) {
+    out += msg('err', '<b>This is cup #' + state.blocker.event + ' again</b> (' + esc(state.blocker.date) + ', won by ' +
+      esc(state.blocker.winner_name) + '), which is already on the leaderboard. The mod only replaces the file when an event ends, so it may not hold the new cup yet.');
+  }
+  if (p.survivors !== 1) {
+    out += msg('err', '<b>No single winner:</b> ' + p.survivors + ' players are still alive after the last round. ' +
+      'This looks like a cup that has not finished (or the live file, topoutresults.json). Send the file once the cup is over.');
+  }
+  var lb = p.leaderboard;
+  out += '<div class="kv">' +
+    '<div><div class="k">Winner</div><div class="v">' + esc(p.survivors === 1 ? p.winnerName : '-') + '</div></div>' +
+    '<div><div class="k">Players</div><div class="v">' + p.lobbySize + '</div></div>' +
+    '<div><div class="k">Rounds</div><div class="v">' + p.roundsTotal + '</div></div>' +
+    '</div>';
+  out += '<div class="maps">Maps: ' + p.maps.map(esc).join(' · ') + '</div>';
+  out += '<ul class="podium">' + lb.slice(0, 3).map(function (x) {
+    return '<li><span class="pos">' + ordinal(x.placement) + '</span><span class="nm">' + esc(x.name) + '</span><span class="tm">' +
+      (x.elimRound ? 'out in round ' + x.elimRound : x.livesLeft + ' ' + (x.livesLeft === 1 ? 'life' : 'lives') + ' left') + '</span></li>';
+  }).join('') + '</ul>';
+  out += '<details class="full"><summary>Full results (' + lb.length + ')</summary><table class="lb"><thead><tr><th>Pos</th><th>Player</th><th>Out in</th></tr></thead><tbody>' +
+    lb.map(function (x) {
+      return '<tr><td class="num">' + x.placement + '</td><td>' + esc(x.name) + '</td><td class="num">' +
+        (x.elimRound ? 'round ' + x.elimRound : 'winner') + '</td></tr>';
+    }).join('') + '</tbody></table></details>';
+  $('preview').innerHTML = out;
+}
+
+// ── Step 3: details. Unusual values do not block; they send the cup to aizpun. ──
+function reviewReasons() {
+  var p = state.preview, out = [];
+  var ev = Number($('eventInput').value), date = $('dateInput').value;
+  if (p && p.format !== 'standard') out.push('this cup has ' + p.roundsTotal + ' rounds and ' + p.maps.length + ' maps, an unusual format');
+  if (state.last && ev && ev !== state.last.event + 1) out.push('cup #' + ev + ' does not follow the last cup on the site (#' + state.last.event + ')');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (state.last && date <= state.last.date) out.push('the date is not after the last cup (' + state.last.date + ')');
+    if (weekday(date) !== 'Saturday') out.push('the date is a ' + weekday(date) + ', not a Saturday');
+  }
+  return out;
+}
+
+['eventInput', 'dateInput', 'submitterInput'].forEach(function (id) {
+  $(id).addEventListener('input', refreshSubmit);
+});
+
+// ── Step 4: send ──
+window.onTurnstileLoad = function () { renderTurnstile(); };
+
+function renderTurnstile() {
+  if (!CONFIGURED || state.widgetId !== null || !window.turnstile || !state.file) return;
+  state.widgetId = window.turnstile.render('#turnstile', {
+    sitekey: SITE_KEY,
+    callback: function (t) { state.token = t; refreshSubmit(); },
+    'expired-callback': function () { state.token = null; refreshSubmit(); },
+    'error-callback': function () { state.token = null; refreshSubmit(); },
+  });
+}
+
+function formProblems() {
+  var missing = [];
+  if (!state.preview) missing.push('a results file');
+  else if (state.preview.survivors !== 1) missing.push('a finished cup');
+  if (state.blocker) missing.push('the new cup\'s file');
+  var ev = Number($('eventInput').value);
+  var evOk = Number.isInteger(ev) && ev >= MIN_EVENT && ev <= 999;
+  $('eventInput').classList.toggle('invalid', !evOk && $('eventInput').value !== '');
+  if (!evOk) missing.push('cup number');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test($('dateInput').value)) missing.push('date');
+  if (CONFIGURED && !state.token) missing.push('the anti-bot check');
+  return missing;
+}
+
+function refreshSubmit() {
+  if (!state.file) return;
+  var reasons = reviewReasons();
+  $('reviewMsg').innerHTML = reasons.length
+    ? msg('warn', 'You can still send it, but aizpun will check it before it goes live, because ' + reasons.map(esc).join('; ') + '.')
+    : '';
+  var problems = formProblems();
+  var ev = Number($('eventInput').value);
+  var note = problems.length ? 'Still needed: ' + problems.join(', ') : '';
+  if (!problems.length && state.last && state.cups.some(function (c) { return c.event === ev; })) {
+    note = 'Cup #' + ev + ' is already on the site; this will be marked duplicate.';
+  }
+  if (!CONFIGURED) note = 'Submissions are not open yet.';
+  $('missing').textContent = note;
+  $('submitBtn').disabled = !CONFIGURED || problems.length > 0 || state.submitting;
+}
+
+$('submitBtn').addEventListener('click', function () {
+  if ($('submitBtn').disabled) return;
+  var p = state.preview;
+  var fd = new FormData();
+  fd.append('file', state.file, state.file.name);
+  fd.append('event', String(Number($('eventInput').value)));
+  fd.append('date', $('dateInput').value);
+  fd.append('submitter', $('submitterInput').value.trim());
+  fd.append('preview', JSON.stringify({ winner: p.winnerName, players: p.lobbySize, rounds: p.roundsTotal }));
+  fd.append('cf-turnstile-response', state.token || '');
+
+  state.submitting = true;
+  refreshSubmit();
+  $('submitMsg').innerHTML = msg('note', 'Sending...');
+  fetch(WORKER_URL + '/submit', { method: 'POST', body: fd }).then(function (r) {
+    return r.json().catch(function () { return { ok: false, message: 'The submit service answered with HTTP ' + r.status + '.' }; });
+  }).then(function (res) {
+    if (res.ok) {
+      var mine = load('tyo_my_submissions', []);
+      if (mine.indexOf(res.id) === -1) mine.push(res.id);
+      store('tyo_my_submissions', mine.slice(-50));
+      $('submitMsg').innerHTML = res.status === 'duplicate'
+        ? msg('warn', 'This exact file was already sent (submission ' + esc(res.same_file_as || '') + '). Yours is recorded as ' + esc(res.id) + ', a duplicate.')
+        : msg('ok', 'Received, thank you! Submission ' + esc(res.id) + '. Watch its status below.');
+      loadStatus();
+    } else {
+      $('submitMsg').innerHTML = msg('err', esc(res.message || 'The submission was rejected.'));
+    }
+  }, function () {
+    $('submitMsg').innerHTML = msg('err', 'Could not reach the submit service. Check your connection and try again.');
+  }).then(function () {
+    state.submitting = false;
+    state.token = null;
+    if (window.turnstile && state.widgetId !== null) window.turnstile.reset(state.widgetId);
+    refreshSubmit();
+  });
+});
+
+// ── Status panel ──
+function loadStatus() {
+  if (!CONFIGURED) { $('statusBody').innerHTML = '<div class="empty">Submissions are not open yet.</div>'; return; }
+  fetch(WORKER_URL + '/status', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (res) {
+    var rows = (res && res.submissions) || [];
+    if (!rows.length) { $('statusBody').innerHTML = '<div class="empty">No submissions yet.</div>'; return; }
+    var mine = new Set(load('tyo_my_submissions', []));
+    $('statusBody').innerHTML = '<table class="status-table"><thead><tr><th>Cup</th><th class="hide-sm">Date</th><th class="hide-sm">By</th><th>Sent</th><th>Status</th><th>Result</th></tr></thead><tbody>' +
+      rows.map(function (s) {
+        var result = '';
+        if (s.status === 'published' && s.summary && s.summary.winner) {
+          result = esc(s.summary.winner) + ' wins' + (s.summary.players ? ', ' + s.summary.players + ' players' : '');
+        } else if (s.note) {
+          result = esc(s.note);
+        }
+        return '<tr class="' + (mine.has(s.id) ? 'mine' : '') + '"><td>#' + esc(s.event) + '</td>' +
+          '<td class="hide-sm">' + esc(s.date) + '</td>' +
+          '<td class="hide-sm">' + esc(s.submitter || '-') + '</td>' +
+          '<td title="' + esc(s.created) + '">' + esc(ago(s.created)) + '</td>' +
+          '<td><span class="pill ' + esc(s.status) + '">' + esc(s.status) + '</span></td>' +
+          '<td>' + result + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }).catch(function () {
+    $('statusBody').innerHTML = '<div class="empty">Could not load submissions.</div>';
+  });
+}
+$('refreshBtn').addEventListener('click', loadStatus);
+setInterval(function () { if (document.visibilityState === 'visible') loadStatus(); }, 30000);
+
+if (!CONFIGURED) {
+  $('closedNotice').style.display = '';
+  $('closedNotice').textContent = 'Submissions are not open yet. You can still drop a file to preview the result.';
+}
+loadStatus();
+</script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>
+<script data-goatcounter="https://aizpun.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

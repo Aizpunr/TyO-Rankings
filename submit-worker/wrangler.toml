@@ -1,0 +1,22 @@
+# Cloudflare Worker that receives Tag You're Out results JSON from submit.html.
+# Setup steps: see README.md. Secrets (TURNSTILE_SECRET, POLLER_TOKEN) are
+# set with `npx wrangler secret put`, never written here.
+name = "tyo-submit"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "SUBMISSIONS"
+# Namespace title: TYO_SUBMISSIONS. Replace both ids with those printed by:
+#   npx wrangler kv namespace create TYO_SUBMISSIONS
+#   npx wrangler kv namespace create TYO_SUBMISSIONS --preview
+id = "f312237fe1e1434b87257b5d20c1aa5b"
+preview_id = "abc3b8c3eb2c469f90cc63390349a894"
+
+[vars]
+ALLOWED_ORIGINS = "https://aizpunr.github.io,http://localhost:9007,http://127.0.0.1:9007"
+TURNSTILE_HOSTNAMES = "aizpunr.github.io,localhost,127.0.0.1"
+MAX_BYTES = "1048576"
+MAX_INDEX = "200"
+DAILY_SUBMIT_CAP = "20"

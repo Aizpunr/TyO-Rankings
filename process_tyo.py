@@ -5,6 +5,9 @@ Usage:
     python process_tyo.py path/to/TYO_50_....json   # explicit path
     python process_tyo.py --push                    # after verifying on localhost,
                                                     # commits+pushes TyO + SOF mod repos
+    python process_tyo.py --ci <log> --summary s.json
+                                                    # GitHub Action (submit page): no
+                                                    # Downloads, refresh, localhost or git
 
 Full arc (mirrors COTD's new_cup.py where possible):
   1. Discover the log (arg or Downloads auto-pick)
@@ -23,6 +26,12 @@ Full arc (mirrors COTD's new_cup.py where possible):
 
 If log is already in logs/ but cup not yet in tyo.json (interrupted prior run),
 steps 5+6 are skipped and we resume at step 7. Explicit re-ingest still errors.
+
+Every mode also refuses a file whose rounds equal an already-ingested log
+(agix's results file still holding the previous cup) and a cup that does not
+end with exactly one survivor (unfinished or crashed). Review flags (unusual
+format, numbering or date gap) are warnings locally; with --ci they go into
+the summary JSON and send the cup to a pull request instead of auto-publish.
 
 Exit codes: 0 = success, 1 = validation/business-rule failure,
 2 = subprocess failure mid-pipeline.
@@ -58,6 +67,9 @@ LOCALHOST_PORT = 9007
 KNOWN_HISTORIC_UNMATCHED = {11}
 
 LOG_RE = re.compile(r'^TYO_(\d+)_(\d{8})\.json$')
+
+# Shared player registry, used only to list new players nobody knows yet.
+PLAYERS_MASTER = ROOT.parent / 'zeepkist cotd elo' / 'players.json'
 
 
 # UTF-8 stdout/stderr so we can print arrows + em-dashes on Windows
@@ -185,6 +197,73 @@ def refuse_if_already_ingested(event_num: int):
     if event_num in load_ingested_events():
         die(1, f'cup {event_num} is already ingested (present in tyo.json).\n'
                f'  To force re-ingest: delete the row via a hand-edit, then rerun.')
+
+
+def load_log(path: Path):
+    with open(path, encoding='utf-8-sig') as fp:
+        return json.load(fp)
+
+
+def cup_fingerprint(data) -> tuple:
+    """Rounds reduced to (map UID, sorted (sid, time, lives)). Two files with
+    the same fingerprint hold the same cup, whatever their names say."""
+    return tuple(
+        ((rnd.get('level') or {}).get('UID'),
+         tuple(sorted((pr['steamID'], str(pr.get('time')), pr.get('livesRemaining'))
+                      for pr in rnd['playerResults'])))
+        for rnd in data['rounds'])
+
+
+def refuse_if_stale(src: Path, data):
+    """Refuse a file that repeats an already-ingested cup. The mod keeps only
+    the last finished cup in topoutresults_bckp.json, so sending it before the
+    new cup has ended re-sends the previous one under a new number."""
+    fp = cup_fingerprint(data)
+    for other in sorted(LOGS.glob('TYO_*.json')):
+        if other.resolve() == src.resolve():
+            continue
+        try:
+            if cup_fingerprint(load_log(other)) == fp:
+                die(1, f'this file holds the same rounds as {other.name}, '
+                       f'a cup that is already on the site. Was it sent before the new cup ended?')
+        except (OSError, json.JSONDecodeError, KeyError):
+            continue
+
+
+def refuse_if_unfinished(data):
+    """Every logged cup so far ends with exactly one survivor. Anything else is
+    the live file of a cup still running, or one that crashed."""
+    import build_tyo
+    state = build_tyo.derive_cup(data)[0]
+    survivors = [s for s in state if not state[s]['eliminated']]
+    if len(survivors) != 1:
+        die(1, f'the cup does not end with a single winner ({len(survivors)} players '
+               f'still alive after the last round). Is it the file of an unfinished cup?')
+
+
+def review_flags(data, event_num: int, date_str: str) -> list[str]:
+    """Things that are not errors but deserve a human look before publishing."""
+    import build_tyo
+    flags = []
+    rounds = data['rounds']
+    fmt = build_tyo.format_flag(len(rounds), len({(r.get('level') or {}).get('UID') for r in rounds}))
+    if fmt != 'standard':
+        flags.append(f'format is {fmt} ({len(rounds)} rounds); such cups count in full today')
+
+    real = [c for c in load_json(TYO_JSON).get('cups', []) if not c.get('stub')] if TYO_JSON.exists() else []
+    if real:
+        last = max(real, key=lambda c: c['event'])
+        if event_num != last['event'] + 1:
+            flags.append(f'cup number {event_num} does not follow the last cup on the site ({last["event"]})')
+        date = dt.datetime.strptime(date_str, '%Y%m%d').date()
+        last_date = dt.date.fromisoformat(last['date'])
+        # No upper bound on the gap: skipped Saturdays are normal (9 of the
+        # first 33 gaps were 14 to 28 days with consecutive numbers).
+        if date <= last_date:
+            flags.append(f'date {date} is not after the last cup ({last_date})')
+        if date.weekday() != 5:
+            flags.append(f'date {date} is a {date.strftime("%A")}, not a Saturday')
+    return flags
 
 
 def refuse_if_dirty(allow_dirty: bool):
@@ -355,6 +434,63 @@ def print_report(event_num: int, date_str: str, sof: float | None):
             print(fmt_mover(m, 'rating'))
 
 
+def known_sids_before() -> set[str]:
+    """SteamIDs of everyone in tyo.json before this cup is built."""
+    if not TYO_JSON.exists():
+        return set()
+    return {str(p['steamid']) for p in load_json(TYO_JSON).get('players', [])}
+
+
+def registry_sids() -> set[str] | None:
+    """SteamIDs in the shared players.json, or None when it is not on disk."""
+    try:
+        reg = load_json(PLAYERS_MASTER)
+    except (OSError, json.JSONDecodeError):
+        return None
+    return {str(v['steam_id']) for v in reg.values() if isinstance(v, dict) and v.get('steam_id')}
+
+
+def write_ci_summary(path: Path, event_num: int, date_str: str, flags: list[str],
+                     known_before: set[str]):
+    """Machine-readable result for the submission poller (commit message, PR
+    body, status note). Written outside the repo so it is never committed."""
+    data = load_json(TYO_JSON)
+    snap = load_json(SNAP_JSON)
+    cup = next(c for c in data['cups'] if c.get('event') == event_num)
+    results = sorted(cup['results'], key=lambda r: r.get('placement') or 999)
+    participants = {str(r['steamid']) for r in cup['results']}
+    registry = registry_sids()
+
+    new_players = []
+    for r in results:
+        sid = str(r['steamid'])
+        if sid not in known_before:
+            new_players.append({'steamid': sid, 'name': r.get('name'),
+                                'in_registry': None if registry is None else sid in registry})
+
+    def mover_dicts(rows, prev, key):
+        return [{'name': m[1], 'rank_delta': m[2], 'score_delta': round(m[3], 1),
+                 'new_rank': m[4], 'prev_rank': m[5]}
+                for m in movers(rows, prev, key, participants=participants)]
+
+    summary = {
+        'event': event_num,
+        'date': f'{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}',
+        'winner': cup.get('winner_name'),
+        'winner_steamid': cup.get('winner_steamid'),
+        'podium': [r.get('name') for r in results[:3]],
+        'lobby_size': cup.get('lobby_size'),
+        'rounds_total': cup.get('rounds_total'),
+        'maps': list(dict.fromkeys(m['name'] for m in cup.get('maps') or [])),
+        'format': cup.get('format'),
+        'flags': flags,
+        'new_players': new_players,
+        'season_movers': mover_dicts(data['ranking']['players'], snap.get('season', {}), 'points'),
+        'elo_movers': mover_dicts(data['ranking_elo']['players'], snap.get('elo', {}), 'rating'),
+    }
+    path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
 # ── Localhost ──────────────────────────────────────────────────────────
 
 def ensure_localhost():
@@ -474,7 +610,14 @@ def main():
                     help='skip the dirty-working-tree check (use sparingly)')
     ap.add_argument('--no-browser', action='store_true',
                     help='do not open the browser at the end')
+    ap.add_argument('--ci', action='store_true',
+                    help='GitHub Action mode: explicit log path, no Downloads, no cross-comp '
+                         'refresh, no localhost; writes --summary')
+    ap.add_argument('--summary', type=Path,
+                    help='with --ci: where to write the result JSON (keep it outside the repo)')
     args = ap.parse_args()
+    if args.ci and (not args.log_path or not args.summary):
+        ap.error('--ci needs an explicit log path and --summary')
 
     # ── --push mode: no build, just git ops on the pending cup ────────
     if args.push:
@@ -491,7 +634,14 @@ def main():
     step(2, 'validating...')
     event_num, date_str = validate_input(src)
     refuse_if_already_ingested(event_num)
+    data = load_log(src)
+    refuse_if_stale(src, data)
+    refuse_if_unfinished(data)
+    flags = review_flags(data, event_num, date_str)
+    known_before = known_sids_before()
     ok(f'(event {event_num}, {date_str})')
+    for f in flags:
+        warn(f'review: {f}')
 
     # ── Step 3: snapshot baseline ─────────────────────────────────────
     # Snapshot represents the standings BEFORE this ingest cycle. In the
@@ -530,13 +680,9 @@ def main():
             # canonical exists but src is elsewhere → suspicious; refuse.
             die(1, f'{canonical} already exists but does not match {src}. '
                    f'Move the stray file aside before rerunning.')
+        # The source stays where it is (aizpun: keep every copy). discover_log
+        # skips cups already in tyo.json, so a leftover in Downloads is harmless.
         shutil.copy2(src, canonical)
-        # Also remove the source copy from Downloads (safe: we now have canonical)
-        if src.parent.resolve() == DOWNLOADS.resolve():
-            try:
-                src.unlink()
-            except OSError:
-                pass
         ok(f'-> logs/{canonical.name}')
 
     # ── Step 5: build ─────────────────────────────────────────────────
@@ -549,6 +695,13 @@ def main():
     step(6, 'verifying build...')
     verify_build_output(build_out)
     ok()
+
+    if args.ci:
+        # Cross-comp refresh needs the PC (catch_up.py does it after publish).
+        write_ci_summary(args.summary, event_num, date_str, flags, known_before)
+        print_report(event_num, date_str, None)
+        print(f'\nsummary -> {args.summary}' + (f' ({len(flags)} review flag(s))' if flags else ''))
+        return
 
     # ── Step 7: cross-comp refresh + SOF backfill ─────────────────────
     step(7, 'cross-comp refresh + SOF backfill...')

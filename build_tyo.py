@@ -17,7 +17,10 @@ import datetime as dt
 from collections import defaultdict, Counter
 from math import inf
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+# Only rewrap when needed: process_tyo.py imports this module after wrapping
+# stdout itself, and a second wrapper would close the first one's buffer.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 from tyo_aliases import resolve, NAME_MAP, _strip_tag
 
@@ -368,6 +371,9 @@ def build_players(cups_real):
     """Given the non-stub cups, build per-player aggregate."""
     by_sid = {}
     aliases_by_sid = defaultdict(set)
+    # Every observed name in cup order (with repeats), so resolve()'s
+    # most-frequent / latest-on-tie rule is deterministic across runs.
+    names_seq_by_sid = defaultdict(list)
     tag_matrix = defaultdict(lambda: {
         'tags_on': defaultdict(int),
         'tagged_by': defaultdict(int),
@@ -384,10 +390,11 @@ def build_players(cups_real):
             for n in names:
                 if n:
                     aliases_by_sid[sid].add(n)
+                    names_seq_by_sid[sid].append(n)
 
     # Initialize empty player records
     for sid in aliases_by_sid:
-        canonical = resolve(str(sid), list(aliases_by_sid[sid]))
+        canonical = resolve(str(sid), names_seq_by_sid[sid])
         by_sid[sid] = {
             'steamid': str(sid),
             'name': canonical,
