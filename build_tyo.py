@@ -1,6 +1,6 @@
 """Build tyo.json from logs/*.json + events.md.
 
-Reads agix's Top->Out JSON files for the Tag You're Out tournament, derives
+Reads agix's Pursuit (PursuitZK) JSON files for the Tag You're Out tournament, derives
 per-cup placements + tag credits, builds per-player rollups with full tag
 interaction matrix, computes an ATP-style cross-cup ranking with rolling
 window + best-of drops, and writes the consolidated tyo.json.

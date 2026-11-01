@@ -216,7 +216,7 @@ def cup_fingerprint(data) -> tuple:
 
 def refuse_if_stale(src: Path, data):
     """Refuse a file that repeats an already-ingested cup. The mod keeps only
-    the last finished cup in topoutresults_bckp.json, so sending it before the
+    the last finished cup in pursuitresults_bckp.json, so sending it before the
     new cup has ended re-sends the previous one under a new number."""
     fp = cup_fingerprint(data)
     for other in sorted(LOGS.glob('TYO_*.json')):

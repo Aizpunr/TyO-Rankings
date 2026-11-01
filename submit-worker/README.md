@@ -1,6 +1,6 @@
 ﻿# tyo-submit Worker
 
-Receives Tag You're Out Top->Out results JSON and hands the original bytes to the poller.
+Receives Tag You're Out results JSON (agix's Pursuit mod, PursuitZK) and hands the original bytes to the poller.
 
 ```text
 submit.html --POST /submit--> Worker + KV <--GET /pending, /log/<id>-- tyo_submissions_poll.py --ci
@@ -78,7 +78,8 @@ The Cloudflare account, Wrangler login and Turnstile widget already exist. Reuse
 4. Generate a NEW TyO poller token (never reuse COTD's or PCDJ's), store it the same way (from Python, not a PowerShell pipe), and keep a copy for the GitHub secret. The 2026-10-22 token is in `C:\Users\rafa\.claude\local\tyo_poller_token.txt`.
 5. Deploy with `npx wrangler deploy`. Put the printed URL (expected `https://tyo-submit.cotd-submit.workers.dev`) in `submit.html` as `PROD_WORKER_URL`. Production Origin is `https://aizpunr.github.io`; local page Origins use port 9007.
 6. In GitHub repository Settings, Secrets and variables, Actions, add `TYO_WORKER_URL` (deployed URL) and `TYO_POLLER_TOKEN` (the new Worker's token).
-7. Under Settings, Actions, General, Workflow permissions, select **Read and write permissions** and enable **Allow GitHub Actions to create and approve pull requests**. The workflow itself is `.github/workflows/process-submission.yml` (every 15 minutes, Saturday 18:00 through Sunday 11:45 UTC, plus manual runs).
+7. Under Settings, Actions, General, Workflow permissions, select **Read and write permissions** and enable **Allow GitHub Actions to create and approve pull requests**. The workflow itself is `.github/workflows/process-submission.yml` (every 15 minutes, Saturday 18:00 through Sunday 11:45 UTC, plus manual runs). GitHub runs scheduled workflows late and skips many: on 2026-10-24 the first run came at 20:07 UTC and the next ones about every 2 hours (4 runs instead of about 36). A manual run (Actions, Process submitted cups, Run workflow) is processed at once.
+8. Start-on-submit (added 2026-11-01): every new `received` submission makes the Worker start the workflow at once through `POST /repos/Aizpunr/TyO-Rankings/actions/workflows/process-submission.yml/dispatches` (vars `GITHUB_REPO`, `GITHUB_WORKFLOW`, `GITHUB_REF` in `wrangler.toml`). It needs the secret `GITHUB_DISPATCH_TOKEN`: a fine-grained token (Settings > Developer settings > Fine-grained tokens) with repository access only to `Aizpunr/TyO-Rankings` and only **Actions: Read and write**. Store it from Python, never through a PowerShell pipe. The current token expires **2027-10-31**. The call runs after the response (`ctx.waitUntil`), so a GitHub failure never breaks a submission; without the secret, or once it expires, the scheduled runs above still pick submissions up. Identical resends (`duplicate` at the door) do not start a run.
 
 For local development, create a gitignored `.dev.vars`:
 

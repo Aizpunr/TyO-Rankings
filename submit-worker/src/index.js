@@ -19,11 +19,11 @@ const ID_RE = /^\d{8}T\d{4}-[0-9a-f]{8}$/;
 const STATUS_LIMIT = 50;
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin');
     const cors = corsHeaders(origin, env);
     try {
-      return await route(request, env, cors, origin);
+      return await route(request, env, cors, origin, ctx);
     } catch (e) {
       console.error('internal error', e && e.stack ? e.stack : e);
       return err(cors, 500, 'internal', 'Something went wrong on the server. Try again later.');
@@ -31,7 +31,7 @@ export default {
   },
 };
 
-async function route(request, env, cors, origin) {
+async function route(request, env, cors, origin, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const method = request.method.toUpperCase();
@@ -46,7 +46,7 @@ async function route(request, env, cors, origin) {
   if (method === 'GET' && path === '/') {
     return json(cors, 200, { ok: true, service: 'tyo-submit' });
   }
-  if (method === 'POST' && path === '/submit') return submit(request, env, cors, origin);
+  if (method === 'POST' && path === '/submit') return submit(request, env, cors, origin, ctx);
   if (method === 'GET' && path === '/status') return publicStatus(env, cors);
 
   // Everything below is for the poller only.
@@ -84,7 +84,7 @@ async function route(request, env, cors, origin) {
 
 // ── POST /submit ──────────────────────────────────────────────────────
 
-async function submit(request, env, cors, origin) {
+async function submit(request, env, cors, origin, ctx) {
   if (!origin || !cors['Access-Control-Allow-Origin']) {
     return err(cors, 403, 'bad_origin', 'Submissions are only accepted from the TyO site.');
   }
@@ -170,7 +170,37 @@ async function submit(request, env, cors, origin) {
   await env.SUBMISSIONS.put('sha:' + sha256, id);
   await writeIndexWith(env, rec);
 
+  // Start the GitHub Action now instead of waiting for its schedule, which
+  // GitHub runs late (about every 2 hours on 2026-10-24). Runs after the
+  // response; the scheduled runs stay as a fallback if this fails.
+  const run = triggerWorkflow(env, id);
+  if (ctx && ctx.waitUntil) ctx.waitUntil(run); else await run;
+
   return json(cors, 200, { ok: true, id, status: 'received' });
+}
+
+// POST .../actions/workflows/<file>/dispatches with a fine-grained token that
+// has Actions: read and write on this one repository (secret GITHUB_DISPATCH_TOKEN).
+async function triggerWorkflow(env, id) {
+  if (!env.GITHUB_DISPATCH_TOKEN || !env.GITHUB_REPO || !env.GITHUB_WORKFLOW) return false;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/${env.GITHUB_WORKFLOW}/dispatches`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + env.GITHUB_DISPATCH_TOKEN,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'tyo-submit',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ref: env.GITHUB_REF || 'main' }),
+    });
+    if (r.status !== 204) console.error('workflow dispatch for', id, 'answered', r.status, (await r.text()).slice(0, 300));
+    return r.status === 204;
+  } catch (e) {
+    console.error('workflow dispatch for', id, 'failed', e && e.message);
+    return false;
+  }
 }
 
 function validateFields(form) {

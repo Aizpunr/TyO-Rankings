@@ -4,7 +4,7 @@ export function validateTyoText(text) {
   try {
     data = JSON.parse(text.replace(/^\uFEFF/, ''));
   } catch {
-    return { ok: false, code: 'not_json', message: 'This file is not valid JSON. Pick the Top->Out results JSON file for your event.' };
+    return { ok: false, code: 'not_json', message: 'This file is not valid JSON. Pick pursuitresults_bckp.json from your PursuitZK folder.' };
   }
   const fail = message => ({ ok: false, code: 'not_tyo', message });
   const settings = data && data.settings;

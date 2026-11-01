@@ -1,7 +1,7 @@
 # Tag You're Out — Event Metadata
 
 Event-level metadata (mapper + winner). Compiled by hand; full per-round data
-comes from agix's Top->Out JSON files (see `reference_agix_topout_mod.md`).
+comes from agix's Pursuit mod (PursuitZK) JSON files.
 
 | Event Number | Date       | Mapper              | Winner          |
 | ------------ | ---------- | ------------------- | --------------- |

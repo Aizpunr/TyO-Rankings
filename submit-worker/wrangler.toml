@@ -20,3 +20,7 @@ TURNSTILE_HOSTNAMES = "aizpunr.github.io,localhost,127.0.0.1"
 MAX_BYTES = "1048576"
 MAX_INDEX = "200"
 DAILY_SUBMIT_CAP = "20"
+# A new submission starts this workflow at once (secret GITHUB_DISPATCH_TOKEN).
+GITHUB_REPO = "Aizpunr/TyO-Rankings"
+GITHUB_WORKFLOW = "process-submission.yml"
+GITHUB_REF = "main"

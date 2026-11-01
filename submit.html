@@ -139,7 +139,7 @@
   <a class="back-link top-link" href="index.html">&larr; back to the leaderboard</a>
   <div class="header">
     <h1>Submit <span>a cup</span></h1>
-    <div class="sub">add a Tag You're Out cup from the Top->Out results file</div>
+    <div class="sub">add a Tag You're Out cup from the Pursuit results file</div>
     <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode"></button>
   </div>
 
@@ -147,11 +147,11 @@
 
   <div class="section">
     <div class="help">
-      Hosted a cup? The Top->Out mod saved its results on your PC. Drop that file below, check the result and send it.
-      A few minutes later the cup is on the leaderboard.
+      Hosted a cup? The Pursuit mod saved its results on your PC. Drop that file below, check the result and send it.
+      It is usually on the leaderboard a few minutes after you press Submit.
       <ul>
-        <li>The file is <code>%APPDATA%\Zeepkist\Mods\TopOutTournament\topoutresults_bckp.json</code> (paste that path into the Explorer address bar).</li>
-        <li>Send it right after the cup: the mod replaces the file when your next Top->Out event ends.</li>
+        <li>The file is <code>%APPDATA%\Zeepkist\Mods\PursuitZK\pursuitresults_bckp.json</code> (paste that path into the Explorer address bar).</li>
+        <li>Send it right after the cup: the mod replaces the file when your next Pursuit event ends.</li>
         <li>The file is read here in your browser first. Nothing is uploaded until you press Submit.</li>
       </ul>
     </div>
@@ -160,7 +160,7 @@
   <div class="section">
     <div class="section-title"><span class="step">1</span> Results file</div>
     <label class="dropzone" id="dropzone" for="fileInput">
-      <div class="big">Drop topoutresults_bckp.json here</div>
+      <div class="big">Drop pursuitresults_bckp.json here</div>
       <div class="small">or click to pick the file</div>
       <input type="file" id="fileInput" accept=".json,application/json">
     </label>
@@ -211,7 +211,7 @@
     </div>
     <div id="statusBody"><div class="empty">Loading...</div></div>
     <div class="legend">
-      <span class="pill received">received</span><span>Waiting for the automatic job. It checks every 15 minutes from Saturday evening to Sunday midday (Spain time).</span>
+      <span class="pill received">received</span><span>Being processed, usually for a few minutes. If it stays here, a backup job retries between Saturday 18:00 and Sunday 12:00 UTC.</span>
       <span class="pill published">published</span><span>Live on the leaderboard.</span>
       <span class="pill processed">processed</span><span>Something looked unusual, so aizpun checks it before it goes live. The note says what.</span>
       <span class="pill duplicate">duplicate</span><span>That cup is already on the leaderboard, or this exact file was already sent. Every file is kept and checked against the published result.</span>
@@ -312,7 +312,7 @@ function readFile(file) {
   $('submitMsg').innerHTML = '';
   $('fileInfo').textContent = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
   if (file.size > MAX_BYTES) {
-    return fail('That file is over 1 MB. A results file is about 100 KB; make sure it is topoutresults_bckp.json.');
+    return fail('That file is over 1 MB. A results file is about 100 KB; make sure it is pursuitresults_bckp.json.');
   }
   file.text().then(function (text) {
     var data;
@@ -388,7 +388,7 @@ function renderPreview() {
   }
   if (p.survivors !== 1) {
     out += msg('err', '<b>No single winner:</b> ' + p.survivors + ' players are still alive after the last round. ' +
-      'This looks like a cup that has not finished (or the live file, topoutresults.json). Send the file once the cup is over.');
+      'This looks like a cup that has not finished (or the live file, pursuitresults.json). Send the file once the cup is over.');
   }
   var lb = p.leaderboard;
   out += '<div class="kv">' +
