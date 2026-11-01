@@ -286,11 +286,28 @@ $('themeToggle').addEventListener('click', function () {
 });
 
 // ── Cups already on the site ──
-fetch('tyo.json?v=' + Date.now()).then(function (r) { return r.json(); }).then(function (tyo) {
+// The last cup comes from the logs/ listing on GitHub's API: GitHub Pages'
+// CDN ignores the ?v= query and once served agix a tyo.json a cup behind
+// (2026-11-01), so it said "#60 does not follow #58". The listing is what
+// the processing job reads too. tyo.json still feeds the resend check.
+state.logged = new Set();
+function noteLast(event, date) {
+  state.logged.add(event);
+  if (!state.last || event > state.last.event) state.last = { event: event, date: date };
+}
+var LOG_RE = /^TYO_(\d+)_(\d{4})(\d{2})(\d{2})\.json$/;
+var gotCups = fetch('tyo.json?v=' + Date.now()).then(function (r) { return r.json(); }).then(function (tyo) {
   state.cups = (tyo.cups || []).filter(function (c) { return !c.stub; });
-  state.cups.forEach(function (c) { if (!state.last || c.event > state.last.event) state.last = c; });
-  if (state.preview) applyDefaults();
+  state.cups.forEach(function (c) { noteLast(c.event, c.date); });
 }).catch(function () { state.cups = []; });
+var gotLogs = fetch('https://api.github.com/repos/Aizpunr/TyO-Rankings/contents/logs?ref=main', { cache: 'no-store' })
+  .then(function (r) { return r.ok ? r.json() : []; }).then(function (files) {
+    (files || []).forEach(function (f) {
+      var m = LOG_RE.exec(f && f.name);
+      if (m) noteLast(parseInt(m[1], 10), m[2] + '-' + m[3] + '-' + m[4]);
+    });
+  }).catch(function () {});
+Promise.all([gotCups, gotLogs]).then(function () { if (state.preview) applyDefaults(); });
 
 // ── Step 1: read the file ──
 var dz = $('dropzone');
@@ -355,7 +372,11 @@ function applyDefaults() {
     $('dateInput').value = fd.iso;
     $('dateHint').textContent = 'From the file (last saved ' + fd.shown + ').';
   }
-  if (state.last && !$('eventInput').value) $('eventInput').value = state.last.event + 1;
+  // Refill while the value is still our own guess (a later source may know a newer cup).
+  if (state.last && (!$('eventInput').value || $('eventInput').value === state.autoEvent)) {
+    state.autoEvent = String(state.last.event + 1);
+    $('eventInput').value = state.autoEvent;
+  }
   $('eventHint').textContent = state.last ? 'Last cup on the site is #' + state.last.event + ' (' + state.last.date + ').' : '';
   state.blocker = staleCup();
   renderPreview();
@@ -462,7 +483,7 @@ function refreshSubmit() {
   var problems = formProblems();
   var ev = Number($('eventInput').value);
   var note = problems.length ? 'Still needed: ' + problems.join(', ') : '';
-  if (!problems.length && state.last && state.cups.some(function (c) { return c.event === ev; })) {
+  if (!problems.length && state.logged.has(ev)) {
     note = 'Cup #' + ev + ' is already on the site; this will be marked duplicate.';
   }
   if (!CONFIGURED) note = 'Submissions are not open yet.';
